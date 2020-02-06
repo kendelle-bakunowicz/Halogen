@@ -16,6 +16,7 @@ TTEntry::TTEntry(Move best, uint64_t ZobristKey, int Score, int Depth, EntryType
 	depth = Depth;
 	cutoff = Cutoff;
 	ancient = false;
+	InUse = false;
 }
 
 

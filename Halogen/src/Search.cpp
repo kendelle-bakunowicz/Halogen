@@ -1,6 +1,6 @@
 #include "Search.h"
 
-unsigned int MAX_DEPTH = 100;
+const unsigned int MAX_DEPTH = 100;
 
 enum Score
 {
@@ -11,23 +11,18 @@ enum Score
 	Draw = 0
 };
 
-struct Killer
-{
-	Move move[2];
-};
-
-const unsigned int MaxDepth = 100;
-
 TranspositionTable tTable;
 SearchTimeManage timeManage;
-std::vector<Killer> KillerMoves(MAX_DEPTH);					//2 moves indexed by distanceFromRoot
-unsigned int HistoryMatrix[N_SQUARES][N_SQUARES];	//first index is from square and 2nd index is to square
+std::mutex iolock;
 
-void OrderMoves(std::vector<Move>& moves, Position& position, int searchDepth, int distanceFromRoot);
+std::vector<std::pair<unsigned int, uint64_t>> ThreadResults;	//indexed by depth. first number of pair represents the number of threads that are done, 2nd represents the cum. total of the nodes searched. Last thread to finish prints result
+std::vector<Move> bestMoveFromThread;
+
+void OrderMoves(std::vector<Move>& moves, Position& position, int searchDepth, int distanceFromRoot, ThreadData& locals);
 void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int score, int alpha, int beta, Position& position, Move move);
-void OrderMoves(std::vector<Move>& moves, Position& position, int searchDepth, int distanceFromRoot);
+void OrderMoves(std::vector<Move>& moves, Position& position, int searchDepth, int distanceFromRoot, ThreadData& locals);
 void PrintBestMove(Move& Best);
-int NegaScout(Position& position, int depth, int alpha, int beta, int colour, int distanceFromRoot, bool allowedNull);
+int NegaScout(Position& position, int depth, int alpha, int beta, int colour, int distanceFromRoot, bool allowedNull, ThreadData& locals);
 bool UseTransposition(TTEntry& entry, int distanceFromRoot, int alpha, int beta);
 bool CheckForRep(Position& position);
 bool LMR(std::vector<Move>& moves, int i, int beta, int alpha, bool InCheck, Position& position, int depth);
@@ -38,12 +33,12 @@ void AddScoreToTable(int Score, int alphaOriginal, Position& position, int depth
 void UpdateBounds(TTEntry& entry, int& alpha, int& beta);
 void UpdatePV(std::deque<Move>& pv, std::deque<Move>& line, Move move);
 int TerminalScore(Position& position, int distanceFromRoot);
-int Quiescence(Position& position, int alpha, int beta, int colour, int distanceFromRoot, int depth);
+int Quiescence(Position& position, int alpha, int beta, int colour, int distanceFromRoot, int depth, ThreadData& locals);
 int extension(Position & position, Move & move, int alpha, int beta);
 Move GetHashMove(Position& position, int depth);
-void AddKiller(Move move, int distanceFromRoot);
-int NegaScoutRoot(Position& position, int depth, int alpha, int beta, int colour, int distanceFromRoot, Move& bestMove, bool PrintCurrentMove);
-void AddHistory(Move& move, int depth);
+void AddKiller(Move move, int distanceFromRoot, ThreadData& locals);
+int NegaScoutRoot(Position& position, int depth, int alpha, int beta, int colour, int distanceFromRoot, Move& bestMove, bool PrintCurrentMove, ThreadData& locals, bool writePermission);
+void AddHistory(Move& move, int depth, ThreadData& locals);
 
 /*
 TODO list:
@@ -55,7 +50,15 @@ TODO list:
 
 std::vector<int> RelativePieceValues = { 100, 300, 300, 500, 900, 10000, 100, 300, 300, 500, 900, 10000 };	//technically, there is no way we can be capturing a king as the game would already be over.
 
-void OrderMoves(std::vector<Move>& moves, Position& position, int searchDepth, int distanceFromRoot)
+ThreadData::ThreadData() : HistoryMatrix{{0}}
+{ 
+	for (int i = 0; i < MAX_DEPTH; i++)
+	{
+		KillerMoves.push_back(Killer());
+	}
+}
+
+void OrderMoves(std::vector<Move>& moves, Position& position, int searchDepth, int distanceFromRoot, ThreadData& locals)
 {
 	/*
 	We want to order the moves such that the best moves are more likely to be further towards the front.
@@ -82,9 +85,9 @@ void OrderMoves(std::vector<Move>& moves, Position& position, int searchDepth, i
 			continue;
 		}
 
-		if (moves[i] == KillerMoves.at(distanceFromRoot).move[0])
+		if (moves[i] == locals.KillerMoves.at(distanceFromRoot).move[0])
 			moves[i].SEE = 20;
-		if (moves[i] == KillerMoves.at(distanceFromRoot).move[1])
+		if (moves[i] == locals.KillerMoves.at(distanceFromRoot).move[1])
 			moves[i].SEE = 10;
 
 		if (moves[i].IsCapture())
@@ -119,10 +122,10 @@ void OrderMoves(std::vector<Move>& moves, Position& position, int searchDepth, i
 		}
 	}
 
-	std::stable_sort(moves.begin(), moves.end(), [](const Move& lhs, const Move& rhs)
+	std::stable_sort(moves.begin(), moves.end(), [&locals](const Move& lhs, const Move& rhs)
 		{
 			if (lhs.SEE == 0 && rhs.SEE == 0)	//comparing quiet moves
-				return HistoryMatrix[lhs.GetFrom()][lhs.GetTo()] > HistoryMatrix[rhs.GetFrom()][rhs.GetTo()];
+				return locals.HistoryMatrix[lhs.GetFrom()][lhs.GetTo()] > locals.HistoryMatrix[rhs.GetFrom()][rhs.GetTo()];
 
 			return lhs.SEE > rhs.SEE;
 		});
@@ -137,7 +140,7 @@ void PrintBestMove(Move& Best)
 
 void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int score, int alpha, int beta, Position& position, Move move)
 {
-	uint64_t actualNodeCount = position.GetNodeCount();
+	uint64_t actualNodeCount = ThreadResults.at(depth).second;
 
 	std::vector<Move> pv;
 	pv.push_back(move);
@@ -203,40 +206,42 @@ void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int scor
 	std::cout << std::endl;
 }
 
-Move SearchPosition(Position position, int allowedTimeMs)
+void InitSearch(int allowedTimeMs)
 {
-	Move move;
 	timeManage.StartSearch(allowedTimeMs);
 	tTable.SetAllAncient();
 
-	position.ResetNodeCount();
 	tTable.ResetHitCount();
+	ThreadResults.clear();
+	bestMoveFromThread.clear();
 
+	for (int i = 0; i < MAX_DEPTH + 1; i++)
+	{
+		ThreadResults.push_back(std::pair<int, uint64_t>());
+		bestMoveFromThread.push_back(Move());
+	}
+}
+
+Move SearchPosition(Position position, int allowedTimeMs, ThreadData locals, bool writePermission, int threadID)
+{
+	position.ResetNodeCount();
+	
 	Timer searchTime;
 	searchTime.Start();
 
 	int alpha = -30000;
 	int beta = 30000;
 
-	for (int i = 0; i < 64; i++)
-	{
-		for (int j = 0; j < 64; j++)
-		{
-			HistoryMatrix[i][j] = 0;
-		}
-	}
-
-	for (int i = 0; i < KillerMoves.size(); i++)
-	{
-		KillerMoves.at(i).move[0] = Move();
-		KillerMoves.at(i).move[1] = Move();
-	}
-
 	for (int depth = 1; !timeManage.AbortSearch(position.GetNodeCount()) && timeManage.ContinueSearch() && depth < 100; )
 	{
+		/*iolock.lock();
+		std::cout << "Thread: " << threadID << " Starting search at depth: " << depth << std::endl;
+		iolock.unlock();*/
+
+
 		Move returnMove;
 
-		int score = NegaScoutRoot(position, depth, alpha, beta, position.GetTurn() ? 1 : -1, 0, returnMove, searchTime.ElapsedMs() > 1000);
+		int score = NegaScoutRoot(position, depth, alpha, beta, position.GetTurn() ? 1 : -1, 0, returnMove, searchTime.ElapsedMs() > 1000, locals, writePermission);
 		if (timeManage.AbortSearch(position.GetNodeCount())) {	break; }
 
 		if (score <= alpha || score >= beta)
@@ -247,23 +252,49 @@ Move SearchPosition(Position position, int allowedTimeMs)
 			continue;
 		}
 
-		move = returnMove;	//this is only hit if the continue before is not hit
-		PrintSearchInfo(depth, searchTime.ElapsedMs(), abs(score) > 9000, score, alpha, beta, position, move);
+		iolock.lock();
+		ThreadResults.at(depth).first++;
+		ThreadResults.at(depth).second += position.GetNodeCount();
+		
+		if (ThreadResults.at(depth).first == 1)
+		{
+			PrintSearchInfo(depth, searchTime.ElapsedMs(), abs(score) > 9000, score, alpha, beta, position, returnMove);
+			bestMoveFromThread.at(depth) = returnMove;
+			std::cout << "Thread: " << threadID << std::endl;
+		}
+
+		iolock.unlock();
 
 		depth++;
 		alpha = score - 25;
 		beta = score + 25;
 	}
 
-	PrintBestMove(move);
-	return move;
+	Move bestMove;
+
+	if (writePermission)
+	{
+		for (int i = 1; i < bestMoveFromThread.size(); i++)
+		{
+			if (bestMoveFromThread.at(i).GetFlag() != UNINITIALIZED)
+				bestMove = bestMoveFromThread.at(i);
+			else
+				break;
+		}
+
+		PrintBestMove(bestMove);
+	}
+
+	return bestMove;
 }
 
-int NegaScoutRoot(Position& position, int depth, int alpha, int beta, int colour, int distanceFromRoot, Move& bestMove, bool PrintCurrentMove)
+int NegaScoutRoot(Position& position, int depth, int alpha, int beta, int colour, int distanceFromRoot, Move& bestMove, bool PrintCurrentMove, ThreadData& locals, bool writePermission)
 {
 	if (timeManage.AbortSearch(position.GetNodeCount())) return 0;
 
 	std::vector<Move> moves;
+	std::vector<Move> deferedMoves;
+
 	LegalMoves(position, moves);
 
 	if (moves.size() == 0)
@@ -277,7 +308,7 @@ int NegaScoutRoot(Position& position, int depth, int alpha, int beta, int colour
 	if (alpha >= beta)
 		return alpha;
 
-	OrderMoves(moves, position, depth, distanceFromRoot);
+	OrderMoves(moves, position, depth, distanceFromRoot, locals);
 	Move hashMove = GetHashMove(position, depth - 1);
 	int Score = LowINF;
 	int a = alpha;
@@ -285,19 +316,33 @@ int NegaScoutRoot(Position& position, int depth, int alpha, int beta, int colour
 
 	for (int i = 0; i < moves.size() && !timeManage.AbortSearch(position.GetNodeCount()); i++)
 	{
-		if (PrintCurrentMove) {
+		if (PrintCurrentMove && writePermission && false) {
+			iolock.lock();
 			std::cout << "info currmovenumber " << i + 1 << " currmove ";
 			moves[i].Print();
 			std::cout << "\n";
+			iolock.unlock();
 		}
 
 		position.ApplyMove(moves.at(i));
 
+		if (i != 0)
+		{
+			if (!tTable.ExclusiveRights(position.GetZobristKey()))
+			{
+				deferedMoves.push_back(moves[i]);
+				position.RevertMove();
+				continue;
+			}
+		}
+
 		int extendedDepth = depth + extension(position, moves[i], alpha, beta);
-		int newScore = -NegaScout(position, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true);
+		int newScore = -NegaScout(position, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true, locals);
+		tTable.FreeExclusiveRights(position.GetZobristKey());
+
 		if (newScore > a && newScore < beta && i >= 1)
 		{
-			newScore = -NegaScout(position, extendedDepth - 1, -beta, -a, -colour, distanceFromRoot + 1, true);	//possibly -newScore rather than -alpha
+			newScore = -NegaScout(position, extendedDepth - 1, -beta, -a, -colour, distanceFromRoot + 1, true, locals);	//possibly -newScore rather than -alpha
 		}
 
 		position.RevertMove();
@@ -311,13 +356,48 @@ int NegaScoutRoot(Position& position, int depth, int alpha, int beta, int colour
 		a = max(Score, a);
 		if (a >= beta) //Fail high cutoff
 		{
-			AddKiller(moves.at(i), distanceFromRoot);
-			AddHistory(moves[i], depth);
+			AddKiller(moves.at(i), distanceFromRoot, locals);
+			AddHistory(moves[i], depth, locals);
 			break;
 		}
 
 		b = a + 1;				//Set a new zero width window
 	}
+
+	for (int i = 0; i < deferedMoves.size(); i++)
+	{
+		//why no pruning? because if another thread was searching it, then that other thread decided it wasn't worth pruning and must be interesting
+
+		position.ApplyMove(deferedMoves.at(i));
+		tTable.PreFetch(position.GetZobristKey());
+
+		int extendedDepth = depth + extension(position, deferedMoves[i], alpha, beta);
+		int newScore = -NegaScout(position, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true, locals);
+
+		if (newScore > a&& newScore < beta && i >= 1)
+		{
+			newScore = -NegaScout(position, extendedDepth - 1, -beta, -alpha, -colour, distanceFromRoot + 1, true, locals);
+		}
+
+		position.RevertMove();
+
+		if (newScore > Score)
+		{
+			Score = newScore;
+			bestMove = deferedMoves.at(i);
+		}
+
+		a = max(Score, a);
+		if (a >= beta) //Fail high cutoff
+		{
+			AddKiller(deferedMoves.at(i), distanceFromRoot, locals);
+			AddHistory(deferedMoves[i], depth, locals);
+			break;
+		}
+
+		b = a + 1;				//Set a new zero width window
+	}
+
 
 	if (!timeManage.AbortSearch(position.GetNodeCount()))
 		AddScoreToTable(Score, alpha, position, depth, distanceFromRoot, beta, bestMove);
@@ -325,7 +405,7 @@ int NegaScoutRoot(Position& position, int depth, int alpha, int beta, int colour
 	return Score;
 }
 
-int NegaScout(Position& position, int depth, int alpha, int beta, int colour, int distanceFromRoot, bool allowedNull)
+int NegaScout(Position& position, int depth, int alpha, int beta, int colour, int distanceFromRoot, bool allowedNull, ThreadData& locals)
 {
 	if (timeManage.AbortSearch(position.GetNodeCount())) return -1;		//we must check later that we don't let this score pollute the transposition table
 	if (distanceFromRoot >= MAX_DEPTH) return 0;			//If we are 100 moves from root I think we can assume its a drawn position
@@ -338,16 +418,18 @@ int NegaScout(Position& position, int depth, int alpha, int beta, int colour, in
 	if (tTable.CheckEntry(position.GetZobristKey(), depth))
 	{
 		TTEntry entry = tTable.GetEntry(position.GetZobristKey());
-		if (UseTransposition(entry, distanceFromRoot, alpha, beta)) return entry.GetScore();
+		if (entry.GetKey() == position.GetZobristKey() && UseTransposition(entry, distanceFromRoot, alpha, beta)) return entry.GetScore();	//due to multi-threading, we double check the key matches when we retrieve the entry, as it could have changed between checkentry() and getentey()
 	}
 
 	/*Drop into quiescence search*/
 	if (depth <= 0 && !IsSquareThreatened(position, position.GetKing(position.GetTurn()), position.GetTurn()))
 	{ 
-		return Quiescence(position, alpha, beta, colour, distanceFromRoot, depth);
+		return Quiescence(position, alpha, beta, colour, distanceFromRoot, depth, locals);
 	}
 
 	std::vector<Move> moves;
+	std::vector<Move> deferedMoves;
+
 	LegalMoves(position, moves);
 
 	if (moves.size() == 0)
@@ -359,14 +441,14 @@ int NegaScout(Position& position, int depth, int alpha, int beta, int colour, in
 	if (AllowedNull(allowedNull, position, beta, alpha, depth))
 	{
 		position.ApplyNullMove();
-		int score = -NegaScout(position, depth - 3, -beta, -beta + 1, -colour, distanceFromRoot + 1, false);	
+		int score = -NegaScout(position, depth - 3, -beta, -beta + 1, -colour, distanceFromRoot + 1, false, locals);
 		position.RevertNullMove();
 
 		//Verification search
 		if (score >= beta)
 		{	
 			//why true? I can't justify but analysis improved in WAC to 297/300. Possibly recursive null calls produces rare speedups where significant work is skipped
-			score = NegaScout(position, depth - 3, beta - 1, beta, colour, distanceFromRoot, true);	
+			score = NegaScout(position, depth - 3, beta - 1, beta, colour, distanceFromRoot, true, locals);
 		}
 
 		if (score >= beta)
@@ -379,7 +461,7 @@ int NegaScout(Position& position, int depth, int alpha, int beta, int colour, in
 	if (alpha >= beta)
 		return alpha;
 
-	OrderMoves(moves, position, depth, distanceFromRoot);
+	OrderMoves(moves, position, depth, distanceFromRoot, locals);
 	Move bestMove = Move();	//used for adding to transposition table later
 	int Score = LowINF;
 	int a = alpha;
@@ -407,7 +489,7 @@ int NegaScout(Position& position, int depth, int alpha, int beta, int colour, in
 		//late move reductions
 		if (LMR(moves, i, beta, alpha, InCheck, position, depth) && i > 3)
 		{
-			int score = -NegaScout(position, depth - 2, -a - 1, -a, -colour, distanceFromRoot + 1, true);
+			int score = -NegaScout(position, depth - 2, -a - 1, -a, -colour, distanceFromRoot + 1, true, locals);
 
 			if (score < a)
 			{
@@ -416,10 +498,22 @@ int NegaScout(Position& position, int depth, int alpha, int beta, int colour, in
 			}
 		}
 
-		int newScore = -NegaScout(position, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true);
+		if (i != 0)
+		{
+			if (!tTable.ExclusiveRights(position.GetZobristKey()))
+			{
+				deferedMoves.push_back(moves[i]);
+				position.RevertMove();
+				continue;
+			}
+		}
+
+		int newScore = -NegaScout(position, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true, locals);
+		tTable.FreeExclusiveRights(position.GetZobristKey());
+
 		if (newScore > a && newScore < beta && i >= 1)
 		{	
-			newScore = -NegaScout(position, extendedDepth - 1, -beta, -alpha, -colour, distanceFromRoot + 1, true);	
+			newScore = -NegaScout(position, extendedDepth - 1, -beta, -alpha, -colour, distanceFromRoot + 1, true, locals);
 		}
 
 		position.RevertMove();
@@ -433,8 +527,42 @@ int NegaScout(Position& position, int depth, int alpha, int beta, int colour, in
 		a = max(Score, a);
 		if (a >= beta) //Fail high cutoff
 		{
-			AddKiller(moves.at(i), distanceFromRoot);
-			AddHistory(moves[i], depth);
+			AddKiller(moves.at(i), distanceFromRoot, locals);
+			AddHistory(moves[i], depth, locals);
+			break;
+		}
+
+		b = a + 1;				//Set a new zero width window
+	}
+
+	for (int i = 0; i < deferedMoves.size(); i++)
+	{
+		//why no pruning? because if another thread was searching it, then that other thread decided it wasn't worth pruning and must be interesting
+
+		position.ApplyMove(deferedMoves.at(i));
+		tTable.PreFetch(position.GetZobristKey());							
+
+		int extendedDepth = depth + extension(position, deferedMoves[i], alpha, beta);
+		int newScore = -NegaScout(position, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true, locals);
+
+		if (newScore > a && newScore < beta && i >= 1)
+		{
+			newScore = -NegaScout(position, extendedDepth - 1, -beta, -alpha, -colour, distanceFromRoot + 1, true, locals);
+		}
+
+		position.RevertMove();
+
+		if (newScore > Score)
+		{
+			Score = newScore;
+			bestMove = deferedMoves.at(i);
+		}
+
+		a = max(Score, a);
+		if (a >= beta) //Fail high cutoff
+		{
+			AddKiller(deferedMoves.at(i), distanceFromRoot, locals);
+			AddHistory(deferedMoves[i], depth, locals);
 			break;
 		}
 
@@ -586,7 +714,7 @@ int TerminalScore(Position& position, int distanceFromRoot)
 	}
 }
 
-int Quiescence(Position& position, int alpha, int beta, int colour, int distanceFromRoot, int depth)
+int Quiescence(Position& position, int alpha, int beta, int colour, int distanceFromRoot, int depth, ThreadData& locals)
 {
 	if (timeManage.AbortSearch(position.GetNodeCount())) return -1;
 	if (distanceFromRoot >= MAX_DEPTH) return 0;			//If we are 100 moves from root I think we can assume its a drawn position
@@ -619,7 +747,7 @@ int Quiescence(Position& position, int alpha, int beta, int colour, int distance
 	if (moves.size() == 0)
 		return staticScore;
 		
-	OrderMoves(moves, position, depth, distanceFromRoot);
+	OrderMoves(moves, position, depth, distanceFromRoot, locals);
 
 	for (int i = 0; i < moves.size(); i++)
 	{
@@ -636,7 +764,7 @@ int Quiescence(Position& position, int alpha, int beta, int colour, int distance
 			continue;
 
 		position.ApplyMove(moves.at(i));
-		int newScore = -Quiescence(position, -beta, -alpha, -colour, distanceFromRoot + 1, depth - 1);
+		int newScore = -Quiescence(position, -beta, -alpha, -colour, distanceFromRoot + 1, depth - 1, locals);
 		position.RevertMove();
 
 		if (newScore > Score)
@@ -653,34 +781,36 @@ int Quiescence(Position& position, int alpha, int beta, int colour, int distance
 	return Score;
 }
 
-void AddKiller(Move move, int distanceFromRoot)
+void AddKiller(Move move, int distanceFromRoot, ThreadData& locals)
 {
 	if (move.IsCapture() || move.IsPromotion()) return;
 
-	if (move == KillerMoves.at(distanceFromRoot).move[0]) return;
-	if (move == KillerMoves.at(distanceFromRoot).move[1])
+	if (move == locals.KillerMoves.at(distanceFromRoot).move[0]) return;
+	if (move == locals.KillerMoves.at(distanceFromRoot).move[1])
 	{
 		//swap to the front
-		Move temp = KillerMoves.at(distanceFromRoot).move[0];
-		KillerMoves.at(distanceFromRoot).move[0] = KillerMoves.at(distanceFromRoot).move[1];
-		KillerMoves.at(distanceFromRoot).move[1] = temp;
+		Move temp = locals.KillerMoves.at(distanceFromRoot).move[0];
+		locals.KillerMoves.at(distanceFromRoot).move[0] = locals.KillerMoves.at(distanceFromRoot).move[1];
+		locals.KillerMoves.at(distanceFromRoot).move[1] = temp;
 
 		return;
 	}
 
-	KillerMoves.at(distanceFromRoot).move[1] = move;	//replace the 2nd one
+	locals.KillerMoves.at(distanceFromRoot).move[1] = move;	//replace the 2nd one
 }
 
-void AddHistory(Move& move, int depth)
+void AddHistory(Move& move, int depth, ThreadData& locals)
 {
-	HistoryMatrix[move.GetFrom()][move.GetTo()] += depth * depth;
+	locals.HistoryMatrix[move.GetFrom()][move.GetTo()] += depth * depth;
 }
 
 Move GetHashMove(Position& position, int depth)
 {
 	if (tTable.CheckEntry(position.GetZobristKey(), depth))
 	{
-		return tTable.GetEntry(position.GetZobristKey()).GetMove();
+		TTEntry entry = tTable.GetEntry(position.GetZobristKey());
+		if (entry.GetKey() == position.GetZobristKey())
+			return entry.GetMove();
 	}
 
 	return {};

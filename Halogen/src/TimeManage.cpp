@@ -32,7 +32,7 @@ int Timer::ElapsedMs()
 	return ElapsedTime;
 }
 
-SearchTimeManage::SearchTimeManage() : timer(Timer())
+SearchTimeManage::SearchTimeManage()
 {
 	AllowedSearchTimeMS = 0;
 }

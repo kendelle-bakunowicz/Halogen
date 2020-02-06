@@ -1,4 +1,4 @@
-#include "Search.h"
+#include "thread.h"
 #include <thread>
 #include <ppl.h>
 
@@ -128,8 +128,7 @@ int main()
 						movetime = btime / (movestogo) - 500 * (movestogo == 1);
 				}
 			}
-			std::thread SearchThread(SearchPosition, GameBoard, movetime);
-			SearchThread.detach();
+			LaunchSearchThread(GameBoard, movetime);
 		}
 
 		else if (token == "setoption")

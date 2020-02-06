@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "TTEntry.h"
+#include <mutex>
 
 class TranspositionTable
 {
@@ -26,8 +27,12 @@ public:
 	uint64_t HashFunction(const uint64_t& key);
 	void PreFetch(uint64_t key);
 
+	bool ExclusiveRights(uint64_t key);
+	void FreeExclusiveRights(uint64_t key);
+
 private:
 	std::vector<TTEntry> table;
 	uint64_t TTHits;
+	std::mutex lock;
 };
 

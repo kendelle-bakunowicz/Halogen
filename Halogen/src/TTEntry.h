@@ -26,6 +26,10 @@ public:
 	void SetAncient(bool isAncient) { ancient = isAncient; }
 	void MateScoreAdjustment(int distanceFromRoot);
 
+	void MarkInUse() { InUse = true; }
+	void ClearInUse() { InUse = false; }
+	bool IsInUse() { return InUse; }
+
 private:
 
 	uint64_t key;
@@ -34,5 +38,6 @@ private:
 	int depth;
 	EntryType cutoff;
 	bool ancient;
+	bool InUse;
 };
 

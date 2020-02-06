@@ -51,10 +51,12 @@ TTEntry TranspositionTable::GetEntry(uint64_t key)
 
 void TranspositionTable::SetAllAncient()
 {
+	lock.lock();
 	for (int i = 0; i < table.size(); i++)
 	{
 		table.at(i).SetAncient(true);
 	}
+	lock.unlock();
 }
 
 int TranspositionTable::GetCapacity()
@@ -72,16 +74,19 @@ int TranspositionTable::GetCapacity()
 
 void TranspositionTable::ResetTable()
 {
+	lock.lock();
 	TTHits = 0;
 
 	for (int i = 0; i < table.size(); i++)
 	{
 		table.at(i) = TTEntry();
 	}
+	lock.unlock();
 }
 
 void TranspositionTable::SetSize(unsigned int MB)
 {
+	lock.lock();
 	table.clear();
 	unsigned int EntrySize = sizeof(TTEntry);
 	unsigned int entries = MB * 1024 * 1024 / EntrySize;
@@ -90,9 +95,31 @@ void TranspositionTable::SetSize(unsigned int MB)
 	{
 		table.push_back(TTEntry());
 	}
+	lock.unlock();
 }
 
 void TranspositionTable::PreFetch(uint64_t key)
 {
 	_mm_prefetch((char*)(&table[HashFunction(key)]), _MM_HINT_T0);
+}
+
+bool TranspositionTable::ExclusiveRights(uint64_t key)
+{
+	size_t hash = HashFunction(key);
+
+	if (table.at(hash).IsInUse())
+	{
+		return false;
+	}
+	else
+	{
+		table.at(hash).MarkInUse();
+		return true;
+	}
+}
+
+void TranspositionTable::FreeExclusiveRights(uint64_t key)
+{
+	size_t hash = HashFunction(key);
+	table.at(hash).ClearInUse();
 }
