@@ -43,3 +43,4 @@ struct Killer
 
 extern TranspositionTable tTable;
 Move SearchPosition(Position position, int allowedTimeMs);
+Move SearchPositionMTDf(Position position, int allowedTimeMs);

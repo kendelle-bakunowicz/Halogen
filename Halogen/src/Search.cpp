@@ -9,9 +9,10 @@ const unsigned int R = 2;	//Null-move reduction depth
 
 TranspositionTable tTable;
 std::vector<std::vector<Move>> PvTable;
+std::vector<Move> PreviousPv;
 
 void OrderMoves(std::vector<Move>& moves, Position& position, int searchDepth, int distanceFromRoot, int alpha, int beta, int colour);
-void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int score, int alpha, int beta, Position& position, Move move);
+void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int score, Position& position, Move move, int alpha, int beta);
 void OrderMoves(std::vector<Move>& moves, Position& position, int searchDepth, int distanceFromRoot, int alpha, int beta, int colour);
 void PrintBestMove(Move& Best);
 bool UseTransposition(TTEntry& entry, int distanceFromRoot, int alpha, int beta);
@@ -30,6 +31,7 @@ void AddKiller(Move move, int distanceFromRoot);
 void AddHistory(Move& move, int depth);
 void UpdatePV(Move move, int distanceFromRoot);
 
+SearchResult MTDf(Position& position, int depth, int scoreGuess, Timer& searchTimer);
 SearchResult NegaScout(Position& position, int depth, int alpha, int beta, int colour, int distanceFromRoot, bool allowedNull, bool printMoves = false);
 SearchResult Quiescence(Position& position, int alpha, int beta, int colour, int distanceFromRoot, int depth);
 
@@ -134,7 +136,7 @@ void PrintBestMove(Move& Best)
 	std::cout << std::endl;
 }
 
-void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int score, int alpha, int beta, Position& position, Move move)
+void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int score, Position& position, Move move, int alpha, int beta)
 {
 	uint64_t actualNodeCount = position.GetNodeCount();
 	std::vector<Move> pv = PvTable[0];
@@ -172,8 +174,6 @@ void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int scor
 		<< " pawnHitRate " << pawnHashTable.HashHits * 1000 / max(pawnHashTable.HashHits + pawnHashTable.HashMisses, 1)
 		<< " pv ";																								//the current best line found
 
-
-
 	for (int i = 0; i < pv.size(); i++)
 	{
 		pv[i].Print();
@@ -185,6 +185,8 @@ void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int scor
 
 Move SearchPosition(Position position, int allowedTimeMs)
 {
+	timeManage.StartSearch(allowedTimeMs);
+
 	PvTable.clear();
 	for (int i = 0; i < MAX_DEPTH; i++)
 	{
@@ -192,12 +194,10 @@ Move SearchPosition(Position position, int allowedTimeMs)
 	}
 
 	Move move;
-	timeManage.StartSearch(allowedTimeMs);
 	tTable.SetAllAncient();
 
 	position.ResetNodeCount();
 	tTable.ResetHitCount();
-
 
 	Timer searchTime;
 	searchTime.Start();
@@ -235,7 +235,7 @@ Move SearchPosition(Position position, int allowedTimeMs)
 		}
 
 		move = returnMove;	//this is only hit if the continue before is not hit
-		PrintSearchInfo(depth, searchTime.ElapsedMs(), abs(score) > 9000, score, alpha, beta, position, move);
+		PrintSearchInfo(depth, searchTime.ElapsedMs(), abs(score) > 9000, score, position, move, alpha, beta);
 
 		depth++;
 		alpha = score - 25;
@@ -246,6 +246,91 @@ Move SearchPosition(Position position, int allowedTimeMs)
 
 	PrintBestMove(move);
 	return move;
+}
+
+Move SearchPositionMTDf(Position position, int allowedTimeMs)
+{
+	timeManage.StartSearch(allowedTimeMs);
+
+	PvTable.clear();
+	for (int i = 0; i < MAX_DEPTH; i++)
+	{
+		PvTable.push_back(std::vector<Move>());
+	}
+
+	Move move;
+	tTable.SetAllAncient();
+
+	position.ResetNodeCount();
+	tTable.ResetHitCount();
+
+	Timer searchTime;
+	searchTime.Start();
+
+	int score = EvaluatePosition(position);
+
+	for (int i = 0; i < 64; i++)
+	{
+		for (int j = 0; j < 64; j++)
+		{
+			HistoryMatrix[i][j] = 0;
+		}
+	}
+
+	for (int i = 0; i < KillerMoves.size(); i++)
+	{
+		KillerMoves.at(i).move[0] = Move();
+		KillerMoves.at(i).move[1] = Move();
+	}
+
+	for (int depth = 1; !timeManage.AbortSearch(position.GetNodeCount()) && timeManage.ContinueSearch() && depth < 100; )
+	{
+		SearchResult search = MTDf(position, depth, score, searchTime);
+		if (timeManage.AbortSearch(position.GetNodeCount())) { break; }
+
+		score = search.GetScore();
+		move = search.GetMove();
+
+		PrintSearchInfo(depth, searchTime.ElapsedMs(), abs(score) > 9000, score, position, move, LowINF, HighINF);
+		depth++;
+	}
+	//tTable.RunAsserts();	//only for testing purposes
+
+	PrintBestMove(move);
+	return move;
+}
+
+SearchResult MTDf(Position& position, int depth, int scoreGuess, Timer& searchTimer) {
+	PreviousPv.clear();
+
+	int bound[2] = { LowINF, HighINF }; 
+	Move bestMove;
+
+	Timer SpamPrevention;
+	SpamPrevention.Start();
+
+	do {
+		int beta = scoreGuess + (scoreGuess == bound[0]);	//if my last guess became the lower bound, beta is my last guess + 1, if not, its just what I got last
+
+		//PreviousPv = PvTable[0];
+		SearchResult result = NegaScout(position, depth, beta - 1, beta, position.GetTurn() ? 1 : -1, 0, false);
+
+		if (timeManage.AbortSearch(position.GetNodeCount())) { break; }
+
+		scoreGuess = result.GetScore();
+		bestMove = result.GetMove();
+
+		if (SpamPrevention.ElapsedMs() > 100)
+		{
+			SpamPrevention.Restart();
+			PrintSearchInfo(depth, searchTimer.ElapsedMs(), abs(scoreGuess) > 9000, scoreGuess, position, bestMove, beta - 1, beta);
+			//std::cout << "info score cp " << scoreGuess << std::endl;
+		}
+
+		bound[scoreGuess < beta] = scoreGuess;	//if lower bound was less than beta then imporve the lower bound, if not improve the upper bound
+	} while (bound[0] < bound[1]);				//once these meet (or pass) we are done
+
+	return SearchResult(scoreGuess, bestMove);
 }
 
 SearchResult NegaScout(Position& position, int depth, int alpha, int beta, int colour, int distanceFromRoot, bool allowedNull, bool printMoves)
@@ -339,7 +424,9 @@ SearchResult NegaScout(Position& position, int depth, int alpha, int beta, int c
 		//late move reductions
 		if (LMR(moves, i, beta, alpha, InCheck, position, depth) && i > 3)
 		{
-			int score = -NegaScout(position, depth - 2, -a - 1, -a, -colour, distanceFromRoot + 1, true).GetScore();
+			int reduction = 1;//i > 9 ? 1 : depth / 3;
+
+			int score = -NegaScout(position, depth - reduction - 1, -a - 1, -a, -colour, distanceFromRoot + 1, true).GetScore();
 
 			if (score < a)
 			{
@@ -360,7 +447,6 @@ SearchResult NegaScout(Position& position, int depth, int alpha, int beta, int c
 		{
 			Score = newScore;
 			bestMove = moves.at(i);
-			
 		}
 
 		if (Score > a)
