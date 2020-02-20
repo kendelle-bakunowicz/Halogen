@@ -447,12 +447,13 @@ SearchResult NegaScout(Position& position, int depth, int alpha, int beta, int c
 		{
 			Score = newScore;
 			bestMove = moves.at(i);
+			UpdatePV(moves.at(i), distanceFromRoot);
 		}
 
 		if (Score > a)
 		{
 			a = Score;
-			UpdatePV(moves.at(i), distanceFromRoot);
+			
 		}
 
 		if (a >= beta) //Fail high cutoff
@@ -671,12 +672,13 @@ SearchResult Quiescence(Position& position, int alpha, int beta, int colour, int
 		{
 			bestmove = moves.at(i);
 			Score = newScore;
+			UpdatePV(moves.at(i), distanceFromRoot);
 		}
 
 		if (Score > alpha)
 		{
 			alpha = Score;
-			UpdatePV(moves.at(i), distanceFromRoot);
+			
 		}
 
 		if (Score >= beta)
