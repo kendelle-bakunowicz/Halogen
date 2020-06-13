@@ -304,17 +304,19 @@ SearchResult NegaScout(Position& position, int depth, int alpha, int beta, int c
 		int score = -NegaScout(position, depth - R - 1, -beta, -beta + 1, -colour, distanceFromRoot + 1, false).GetScore();	
 		position.RevertNullMove();
 
-		return score;
+		
 
-		/*
+		
 		//Verification search
 		if (score >= beta)
 		{
+			return score;
+
 			SearchResult result = NegaScout(position, depth - R - 1, beta - 1, beta, colour, distanceFromRoot, false);
 
 			if (result.GetScore() >= beta)
 				return result;
-		}*/
+		}
 	}
 
 	std::vector<Move> moves;
