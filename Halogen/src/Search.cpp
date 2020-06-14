@@ -301,7 +301,7 @@ SearchResult NegaScout(Position& position, int depth, int alpha, int beta, int c
 	}
 
 	/*Null move pruning*/
-	if (AllowedNull(allowedNull, position, beta, alpha, depth))
+	/*if (AllowedNull(allowedNull, position, beta, alpha, depth))
 	{
 		position.ApplyNullMove();
 		int score = -NegaScout(position, depth - R - 1, -beta, -beta + 1, -colour, distanceFromRoot + 1, false).GetScore();	
@@ -315,7 +315,7 @@ SearchResult NegaScout(Position& position, int depth, int alpha, int beta, int c
 			if (result.GetScore() >= beta)
 				return result;
 		}
-	}
+	}*/
 
 	std::vector<Move> moves;
 	LegalMoves(position, moves);
