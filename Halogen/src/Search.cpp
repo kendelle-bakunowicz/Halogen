@@ -379,7 +379,7 @@ SearchResult NegaScout(Position& position, int depth, int alpha, int beta, int c
 		int newScore = -NegaScout(position, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true).GetScore();
 		if (newScore > a && newScore < beta && i >= 1)
 		{	
-			newScore = -NegaScout(position, extendedDepth - 1, -beta, -a, -colour, distanceFromRoot + 1, true).GetScore();
+			newScore = -NegaScout(position, extendedDepth - 1, -beta, -newScore, -colour, distanceFromRoot + 1, true).GetScore();
 		}
 
 		position.RevertMove();
