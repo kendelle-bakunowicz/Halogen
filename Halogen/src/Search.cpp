@@ -120,7 +120,7 @@ void OrderMoves(std::vector<Move>& moves, Position& position, unsigned int initi
 		//Hash move
 		if (moves[i] == TTmove)
 		{
-			orderScores[i] = 10000000;
+			orderScores[i] = 10'000'000;
 			continue;
 		}
 
@@ -129,7 +129,7 @@ void OrderMoves(std::vector<Move>& moves, Position& position, unsigned int initi
 		{
 			if (moves[i].GetFlag() == QUEEN_PROMOTION || moves[i].GetFlag() == QUEEN_PROMOTION_CAPTURE)
 			{
-				orderScores[i] = 9000000;
+				orderScores[i] = 9'000'000;
 			}
 			else
 			{
@@ -151,12 +151,12 @@ void OrderMoves(std::vector<Move>& moves, Position& position, unsigned int initi
 
 			if (SEE >= 0)
 			{
-				orderScores[i] = 8000000 + SEE;
+				orderScores[i] = 8'000'000 + SEE;
 			}
 
 			if (SEE < 0)
 			{
-				orderScores[i] = 6000000 + SEE;
+				orderScores[i] = 6'000'000 + SEE;
 			}
 
 			continue;
@@ -165,22 +165,37 @@ void OrderMoves(std::vector<Move>& moves, Position& position, unsigned int initi
 		//Killers
 		if (moves[i] == locals.KillerMoves.at(distanceFromRoot).move[0])
 		{
-			orderScores[i] = 7500000;
+			orderScores[i] = 7'500'000;
 			continue;
 		}
 
 		if (moves[i] == locals.KillerMoves.at(distanceFromRoot).move[1])
 		{
-			orderScores[i] = 6500000;
+			orderScores[i] = 7'250'000;
 			continue;
+		}
+
+		if (distanceFromRoot >= 2)
+		{
+			if (moves[i] == locals.KillerMoves.at(distanceFromRoot - 2).move[0])
+			{
+				orderScores[i] = 7'000'000;
+				continue;
+			}
+
+			if (moves[i] == locals.KillerMoves.at(distanceFromRoot - 2).move[1])
+			{
+				orderScores[i] = 6'750'000;
+				continue;
+			}
 		}
 
 		//Quiet
 		orderScores[i] = locals.HistoryMatrix[moves[i].GetFrom()][moves[i].GetTo()];
 
-		if (orderScores[i] > 1000000)
+		if (orderScores[i] > 1'000'000)
 		{
-			orderScores[i] = 1000000;
+			orderScores[i] = 1'000'000;
 		}
 	}
 
