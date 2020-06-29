@@ -47,6 +47,7 @@ void TranspositionTable::AddEntry(const Move& best, uint64_t ZobristKey, int Sco
 
 TTEntry TranspositionTable::GetEntry(uint64_t key)
 {
+	std::lock_guard<std::mutex> lock(*locks.at(key % locks.size()));
 	return table.at(HashFunction(key));
 }
 

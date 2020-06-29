@@ -11,6 +11,7 @@ Some global variables for sharing information between threads
 */
 std::mutex ioMutex;
 unsigned int threadDepthCompleted = 0;			//The depth that has been completed. When the first thread finishes a depth it increments this. All other threads should stop searching that depth
+std::vector<unsigned int> currentSearchDepths;
 Move bestMoveThread;							//Whoever finishes first gets to update this as long as they searched deeper than threadDepth
 
 void OrderMoves(std::vector<Move>& moves, Position& position, unsigned int initialDepth, int depthRemaining, int distanceFromRoot, int alpha, int beta, int colour, ThreadData& locals);
@@ -54,6 +55,7 @@ Move MultithreadedSearch(Position position, int allowedTimeMs, unsigned int thre
 	for (int i = 0; i < threadCount; i++)
 	{
 		uint64_t nodesSearched = 0;
+		currentSearchDepths.push_back(0);
 		threads.emplace_back(std::thread([position, allowedTimeMs, &nodesSearched, i] {SearchPosition(position, allowedTimeMs, nodesSearched, i); }));
 	}
 
@@ -71,6 +73,7 @@ uint64_t BenchSearch(Position position, int maxSearchDepth)
 	InitSearch();
 
 	uint64_t nodesSearched = 0;
+	currentSearchDepths.push_back(0);
 	Move move = SearchPosition(position, 2147483647, nodesSearched, 0, maxSearchDepth);
 
 	PrintBestMove(move);
@@ -80,6 +83,7 @@ uint64_t BenchSearch(Position position, int maxSearchDepth)
 void InitSearch()
 {
 	threadDepthCompleted = 0;
+	currentSearchDepths.clear();
 	bestMoveThread = Move();
 	KeepSearching = true;
 	tTable.SetAllAncient();
@@ -328,6 +332,26 @@ Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, 
 
 	for (int depth = 1; (!locals.timeManage.AbortSearch(position.GetNodeCount()) && locals.timeManage.ContinueSearch() && depth <= maxSearchDepth) || depth == 1; )	//depth == 1 is a temporary band-aid to illegal moves under time pressure.
 	{
+		std::unique_lock<std::mutex>  lock(ioMutex);	//single-threaded section
+		if (threadID != 0 && depth > 6)
+		{
+			unsigned int count = 0;
+			
+			for (int i = 0; i < currentSearchDepths.size(); i++)
+			{
+				if (currentSearchDepths[i] >= depth)
+					count++;
+			}
+
+			if (count > ThreadCount / 2)
+			{
+				depth++;
+				continue;
+			}
+		}
+		currentSearchDepths[threadID] = depth;
+		lock.unlock();									//end single-threaded section
+
 		position.IncreaseNodeCount();	//make the root node count. Otherwise when re-searching a position and getting an immediant hash hit the nodes searched is zero
 
 		SearchResult search = NegaScout(position, depth, depth, alpha, beta, position.GetTurn() ? 1 : -1, 0, false, locals, searchTime.ElapsedMs() > 1000);
