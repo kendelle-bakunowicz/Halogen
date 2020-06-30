@@ -333,7 +333,7 @@ Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, 
 	for (int depth = 1; (!locals.timeManage.AbortSearch(position.GetNodeCount()) && locals.timeManage.ContinueSearch() && depth <= maxSearchDepth) || depth == 1; )	//depth == 1 is a temporary band-aid to illegal moves under time pressure.
 	{
 		std::unique_lock<std::mutex>  lock(ioMutex);	//single-threaded section
-		if (threadID != 0 && depth > 6)
+		if (ThreadCount > 1 && depth > 6)
 		{
 			unsigned int count = 0;
 			
