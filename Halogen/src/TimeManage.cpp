@@ -44,7 +44,6 @@ SearchTimeManage::~SearchTimeManage()
 
 bool SearchTimeManage::ContinueSearch()
 {
-	return true;
 	return (timer.ElapsedMs() < AllowedSearchTimeMS / 2);
 }
 
