@@ -29,7 +29,6 @@ int AdjustRookScore(const Position& position);
 int RookFileAdjustment(const Position& position);
 int CalculateTempo(const Position& position);
 
-bool InsufficentMaterialEvaluation(const Position& position, int Material);		//if you already have the material score -> faster!
 bool InsufficentMaterialEvaluation(const Position& position);					//will count the material for you
 
 bool PawnBlockade(const Position& position);
@@ -68,7 +67,6 @@ void MirrorLeftRight(Position& pos);
 int EvaluatePosition(const Position & position)
 {
 	int Material = EvaluateMaterial(position);	
-	if (InsufficentMaterialEvaluation(position, Material)) return 0;	//note the Material doesn't include the pawns, but if there were any pawns we return false anyways so that doesn't matter
 
 	int MidGame = 0;
 	int EndGame = 0;
@@ -103,7 +101,12 @@ int EvaluatePosition(const Position & position)
 	MidGame = Material + PieceSquaresMid + Castle + Tropism + pawnsMid + BishopPair + KnightAdj + RookAdj + RookFiles + tempo;
 	EndGame = Material + PieceSquaresEnd + Castle + Tropism + pawnsEnd + BishopPair + KnightAdj + RookAdj + RookFiles + tempo;
 
-	return ((MidGame * (256 - GamePhase)) + (EndGame * GamePhase)) / 256;
+	int score = ((MidGame * (256 - GamePhase)) + (EndGame * GamePhase)) / 256;
+
+	if (InsufficentMaterialEvaluation(position))
+		return score / 16;
+	else
+		return score;
 }
 
 int CalculateTempo(const Position& position)
@@ -243,13 +246,11 @@ int EvaluatePawns(const Position& position, unsigned int gameStage)
 	return Score;
 }
 
-bool InsufficentMaterialEvaluation(const Position& position, int Material)
+bool InsufficentMaterialEvaluation(const Position& position)
 {
-	if ((position.GetPieceBB(WHITE_PAWN)) != 0) return false;
 	if ((position.GetPieceBB(WHITE_ROOK)) != 0) return false;
 	if ((position.GetPieceBB(WHITE_QUEEN)) != 0) return false;
 
-	if ((position.GetPieceBB(BLACK_PAWN)) != 0) return false;
 	if ((position.GetPieceBB(BLACK_ROOK)) != 0) return false;
 	if ((position.GetPieceBB(BLACK_QUEEN)) != 0) return false;
 
@@ -261,8 +262,8 @@ bool InsufficentMaterialEvaluation(const Position& position, int Material)
 		- both sides have a bare king																																									1.
 		- one side has a king and a minor piece against a bare king																																		1.
 		- both sides have a king and a bishop, the bishops being the same color																															1.
-		
-		The bishops of different colors are not counted as an immediate draw, because of the possibility of a helpmate in the corner. 
+
+		The bishops of different colors are not counted as an immediate draw, because of the possibility of a helpmate in the corner.
 		Since this is unlikely given even a four ply search, we may introduce another class of drawn positions: those that cannot be claimed, but can be evaluated as draws:
 
 		- two knights against the bare king																																								2.
@@ -291,12 +292,6 @@ bool InsufficentMaterialEvaluation(const Position& position, int Material)
 	if (BlackBishops == 1 && WhiteBishops == 2 && BlackKnights == 0 && WhiteKnights == 0) return true;	//4
 
 	return false;
-}
-
-bool InsufficentMaterialEvaluation(const Position& position)
-{
-	int Material = EvaluateMaterial(position);
-	return InsufficentMaterialEvaluation(position, Material);
 }
 
 bool PawnBlockade(const Position& position)
