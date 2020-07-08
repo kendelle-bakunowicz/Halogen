@@ -357,7 +357,7 @@ void Texel(std::vector<int*> params)
 	Make sure you disable pawn hash tables and transposition tables!
 	*/
 	
-	std::ifstream infile("quiet-labeled.epd");
+	std::ifstream infile("C:\\OpenBench4Per.txt");
 
 	if (!infile) 
 	{
@@ -385,34 +385,25 @@ void Texel(std::vector<int*> params)
 		{
 			std::string stub;
 			iss >> stub;
-
-			if (stub == "c9")
-			{
-				arrayTokens.push_back("0");
-				arrayTokens.push_back("1");
-				break;
-			}
-
 			arrayTokens.push_back(stub);
 		} while (iss);
 
-		if (!GameBoard.InitialiseFromFen(arrayTokens))
+		if (!GameBoard.InitialiseFromFen(line))
 		{
 			std::cout << "line " << lineCount + 1 << ": BAD FEN" << endl;
 		}
 
-		std::string result;
-		iss >> result;
+		std::string result = arrayTokens[arrayTokens.size() - 2];
 		
-		if (result == "\"0-1\";") 
+		if (result == "0-1") 
 		{
 			positions.push_back({ GameBoard, 0 });
 		}
-		else if (result == "\"1-0\";")
+		else if (result == "1-0")
 		{
 			positions.push_back({ GameBoard, 1 });
 		}
-		else if (result == "\"1/2-1/2\";")
+		else if (result == "1/2-1/2")
 		{
 			positions.push_back({ GameBoard, 0.5 });
 		}

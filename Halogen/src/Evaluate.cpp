@@ -1,22 +1,22 @@
 #include "Evaluate.h"
 
-int pieceValueVector[N_PIECE_TYPES] = {95, 337, 330, 545, 1024, 5000};
+int pieceValueVector[N_PIECE_TYPES] = {75, 246, 202, 406, 898, 5000};
 
-int knightAdj[9] = {-129, -53, -38, -31, -25, -20, -16, -9, 2};	//adjustment of piece value based on the number of own pawns
-int rookAdj[9] = {-39, -33, -29, -30, -35, -38, -43, -49, -54};
+int knightAdj[9] = {-89, -51, -55, -57, -57, -54, -50, -47, -47};	//adjustment of piece value based on the number of own pawns
+int rookAdj[9] = {-41, -76, -86, -90, -91, -90, -87, -80, -73};
 
 int WeakPawnPenalty = 5;
-int WeakOpenPawnPenalty = 15;
-int DoubledPawnPenalty = 9;
+int WeakOpenPawnPenalty = 17;
+int DoubledPawnPenalty = 12;
 
-int PassedPawnBonus[N_RANKS] = {0, 1, -2, 9, 32, 88, 143, 0};
+int PassedPawnBonus[N_RANKS] = {0, -1, -1, 5, 17, 32, 48, 0};
 
 int CastledBonus = 40;
-int BishopPairBonus = 32;
-int RookOpenFileBonus = 30;
-int RookSemiOpenFileBonus = 23;
+int BishopPairBonus = 18;
+int RookOpenFileBonus = 17;
+int RookSemiOpenFileBonus = 14;
 
-int TempoBonus = 17;
+int TempoBonus = 7;
 
 int EvaluateCastleBonus(const Position& position);
 int EvaluatePawn(const Position& position, unsigned int square, bool colour);
@@ -629,8 +629,12 @@ std::vector<int*> TexelParamiters()
 
 	for (int i = 0; i < N_SQUARES; i++)
 	{
-		params.push_back(&PawnSquareValuesMid[i]);
-		params.push_back(&PawnSquareValuesEndGame[i]);
+		if (GetRank(i) != RANK_1 && GetRank(i) != RANK_8)
+		{
+			params.push_back(&PawnSquareValuesMid[i]);
+			params.push_back(&PawnSquareValuesEndGame[i]);
+		}
+
 		params.push_back(&KnightSquareValues[i]);
 		params.push_back(&RookSquareValues[i]);
 		params.push_back(&BishopSquareValues[i]);
