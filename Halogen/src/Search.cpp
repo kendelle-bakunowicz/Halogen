@@ -539,7 +539,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		int extendedDepth = depthRemaining + extension(position, moves[i], alpha, beta);
 
 		//late move reductions
-		if (LMR(moves[i], InCheck, position, depthRemaining) && i > 3)
+		if (LMR(moves[i], InCheck, position, depthRemaining) && i > 0)
 		{
 			int reduction = Reduction(depthRemaining, i, alpha, beta);
 			int score = -NegaScout(position, initialDepth, extendedDepth - 1 - reduction, -a - 1, -a, -colour, distanceFromRoot + 1, true, locals, sharedData).GetScore();
