@@ -520,7 +520,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	bool InCheck = IsInCheck(position);
 	int staticScore = colour * EvaluatePosition(position);
 
-	bool FutileNode = (depthRemaining < FutilityMargins.size() && staticScore + FutilityMargins.at(std::max<int>(0, depthRemaining)) < a);
+	bool FutileNode = (depthRemaining < FutilityMargins.size() && staticScore + FutilityMargins.at(std::max<int>(0, depthRemaining)) < a && beta < mateIn(MAX_DEPTH) && alpha > matedIn(MAX_DEPTH));
 
 	for (int i = 0; i < moves.size(); i++)	
 	{
