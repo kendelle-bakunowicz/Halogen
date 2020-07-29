@@ -1,6 +1,5 @@
 #include "Search.h"
 
-const std::vector<int> FutilityMargins = { 100, 150, 250, 400, 600 };
 const unsigned int R = 2;	//Null-move reduction depth
 
 TranspositionTable tTable;
@@ -29,6 +28,7 @@ void UpdatePV(Move move, int distanceFromRoot, std::vector<std::vector<Move>>& P
 int Reduction(int depth, int i, int alpha, int beta);
 int matedIn(int distanceFromRoot);
 int mateIn(int distanceFromRoot);
+int FutilityMargin(int depth);
 
 Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, ThreadSharedData& sharedData, unsigned int threadID, int maxSearchDepth = MAX_DEPTH, SearchData locals = SearchData());
 SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthRemaining, int alpha, int beta, int colour, int distanceFromRoot, bool allowedNull, SearchData& locals, ThreadSharedData& sharedData);
@@ -520,7 +520,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	bool InCheck = IsInCheck(position);
 	int staticScore = colour * EvaluatePosition(position);
 
-	bool FutileNode = (depthRemaining < FutilityMargins.size() && staticScore + FutilityMargins.at(std::max<int>(0, depthRemaining)) < a);
+	bool FutileNode = (depthRemaining < 5 && staticScore + FutilityMargin(depthRemaining) < a);
 
 	for (int i = 0; i < moves.size(); i++)	
 	{
@@ -749,6 +749,11 @@ int matedIn(int distanceFromRoot)
 int mateIn(int distanceFromRoot)
 {
 	return -(MateScore) - (distanceFromRoot);
+}
+
+int FutilityMargin(int depth)
+{
+	return 100 + 25 * depth + 25 * depth * depth;
 }
 
 SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha, int beta, int colour, int distanceFromRoot, int depthRemaining, SearchData& locals, ThreadSharedData& sharedData)
