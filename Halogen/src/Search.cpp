@@ -652,7 +652,7 @@ int extension(Position & position, Move & move, int alpha, int beta)
 	if (IsPV(beta, alpha))
 	{
 		if (IsSquareThreatened(position, position.GetKing(position.GetTurn()), position.GetTurn()))	
-			extension += 1;
+			extension += 2;
 	}
 	else
 	{
