@@ -44,7 +44,7 @@ SearchTimeManage::~SearchTimeManage()
 
 bool SearchTimeManage::ContinueSearch()
 {
-	return (timer.ElapsedMs() < AllowedSearchTimeMS / 2);
+	return (!EarlyTerminate || timer.ElapsedMs() < AllowedSearchTimeMS / 2);
 }
 
 bool SearchTimeManage::AbortSearch(uint64_t nodes)
@@ -55,9 +55,10 @@ bool SearchTimeManage::AbortSearch(uint64_t nodes)
 	return (!KeepSearching || CacheShouldStop);
 }
 
-void SearchTimeManage::StartSearch(int ms)
+void SearchTimeManage::StartSearch(int ms, bool earlyTerminate)
 {
 	timer.Restart();
 	AllowedSearchTimeMS = ms;
+	EarlyTerminate = earlyTerminate;
 	timer.Start();
 }

@@ -31,7 +31,7 @@ int Reduction(int depth, int i, int alpha, int beta);
 int matedIn(int distanceFromRoot);
 int mateIn(int distanceFromRoot);
 
-Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, ThreadSharedData& sharedData, unsigned int threadID, int maxSearchDepth = MAX_DEPTH, SearchData locals = SearchData());
+Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, ThreadSharedData& sharedData, unsigned int threadID, int maxSearchDepth = MAX_DEPTH, bool earlyTerminate = true, SearchData locals = SearchData());
 SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthRemaining, int alpha, int beta, int colour, unsigned int distanceFromRoot, bool allowedNull, SearchData& locals, ThreadSharedData& sharedData);
 SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha, int beta, int colour, unsigned int distanceFromRoot, int depthRemaining, SearchData& locals, ThreadSharedData& sharedData);
 
@@ -40,7 +40,7 @@ int seeCapture(Position& position, const Move& move, bool side); //Don't send th
 
 void InitSearch();
 
-Move MultithreadedSearch(Position position, int allowedTimeMs, unsigned int threadCount, int maxSearchDepth)
+Move MultithreadedSearch(Position position, int allowedTimeMs, unsigned int threadCount, int maxSearchDepth, bool earlyTerminate)
 {
 	InitSearch();
 
@@ -50,7 +50,7 @@ Move MultithreadedSearch(Position position, int allowedTimeMs, unsigned int thre
 	for (unsigned int i = 0; i < threadCount; i++)
 	{
 		uint64_t nodesSearched = 0;
-		threads.emplace_back(std::thread([=, &nodesSearched, &sharedData] {SearchPosition(position, allowedTimeMs, nodesSearched, sharedData, i, maxSearchDepth); }));
+		threads.emplace_back(std::thread([=, &nodesSearched, &sharedData] {SearchPosition(position, allowedTimeMs, nodesSearched, sharedData, i, maxSearchDepth, earlyTerminate); }));
 	}
 
 	for (size_t i = 0; i < threads.size(); i++)
@@ -314,11 +314,11 @@ void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int scor
 	std::cout << std::endl;
 }
 
-Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, ThreadSharedData& sharedData, unsigned int threadID, int maxSearchDepth, SearchData locals)
+Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, ThreadSharedData& sharedData, unsigned int threadID, int maxSearchDepth, bool earlyTerminate, SearchData locals)
 {
 	Move move;
 
-	locals.timeManage.StartSearch(allowedTimeMs);
+	locals.timeManage.StartSearch(allowedTimeMs, earlyTerminate);
 	position.ResetNodeCount();
 
 	Timer searchTime;

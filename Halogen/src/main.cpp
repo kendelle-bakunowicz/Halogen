@@ -100,22 +100,30 @@ int main(int argc, char* argv[])
 			int binc = 0;
 			int searchTime = 0;
 			int movestogo = 0;
+			int searchDepth = MAX_DEPTH;
+			bool earlyTerminate = true;		//set false for go depth X or go movetime X (tells search function to not stop search early to save time)
 
 			while (iss >> token)
 			{
-				if (token == "wtime")	iss >> wtime;
-				else if (token == "btime")	iss >> btime;
-				else if (token == "winc")	iss >> winc;
-				else if (token == "binc")	iss >> binc;
-				else if (token == "movetime") iss >> searchTime;
-				else if (token == "infinite") searchTime = 2147483647;
-				else if (token == "movestogo") iss >> movestogo;
+				if (token == "wtime")				iss >> wtime;
+				else if (token == "btime")			iss >> btime;
+				else if (token == "winc")			iss >> winc;
+				else if (token == "binc")			iss >> binc;
+				else if (token == "infinite")							searchTime = 2147483647;
+				else if (token == "movestogo")		iss >> movestogo;
+				else if (token == "depth")		  { iss >> searchDepth; searchTime = 2147483647; }
+				else if (token == "movetime")		iss >> searchTime;
+
+				if (token == "depth" || token == "movetime")
+					earlyTerminate = false;
 			}
 
 			int movetime = 0;
 
-			if (searchTime != 0) 
+			if (searchTime != 0)
+			{
 				movetime = searchTime;
+			}
 			else
 			{
 				if (movestogo == 0)
@@ -135,7 +143,7 @@ int main(int argc, char* argv[])
 				}
 			}
 
-			thread searchThread([&] {MultithreadedSearch(position, movetime, ThreadCount); });
+			thread searchThread([&] {MultithreadedSearch(position, movetime, ThreadCount, searchDepth, earlyTerminate); });
 			searchThread.detach();
 			
 		}
