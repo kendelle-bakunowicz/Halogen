@@ -20,4 +20,6 @@ bool EvaluateDebug();
 std::vector<int*> TexelParamiters();
 std::vector<int*> TexelPST();
 
+extern int TempoBonus;
+
 
