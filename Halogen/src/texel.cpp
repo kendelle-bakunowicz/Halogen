@@ -66,7 +66,7 @@ void Texel(std::vector<int*> params, std::vector<int*> PST)
 	double step_size = 10000;
 	int iteration = 1;
 	int batchSize = 10;	//eg 20 means 1/20th
-	double lambda = 0;// 0.000001;
+	double lambda = 0.000001;
 
 	auto rng = std::default_random_engine{};
 
