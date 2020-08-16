@@ -448,7 +448,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		position.RevertNullMove();
 
 		//Verification search worth about ~5 elo. 
-		if (score + 2 * TempoBonus >= beta)
+		if (score + TempoBonus >= beta)
 		{
 			SearchResult result = NegaScout(position, initialDepth, depthRemaining - reduction - 1, beta - 1, beta, colour, distanceFromRoot, false, locals, sharedData);
 
