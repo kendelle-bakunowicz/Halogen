@@ -227,7 +227,7 @@ int see(Position& position, int square, bool side)
 	
 	if (!capture.IsUninitialized())
 	{
-		int captureValue = PieceValues(position.GetSquare(capture.GetTo()));
+		int captureValue = PieceValues(position.GetSquare(capture.GetTo())) + PieceSquareTables[MIDGAME][position.GetSquare(capture.GetTo())][capture.GetTo()];
 
 		position.ApplySEECapture(capture);
 		value = std::max(0, captureValue - see(position, square, !side));	// Do not consider captures if they lose material, therefor max zero 
@@ -242,7 +242,7 @@ int seeCapture(Position& position, const Move& move, bool side)
 	assert(move.GetFlag() == CAPTURE);	//Don't seeCapture with promotions or en_passant!
 
 	int value = 0;
-	int captureValue = PieceValues(position.GetSquare(move.GetTo()));
+	int captureValue = PieceValues(position.GetSquare(move.GetTo())) + PieceSquareTables[MIDGAME][position.GetSquare(move.GetTo())][move.GetTo()];
 
 	position.ApplySEECapture(move);
 	value = captureValue - see(position, move.GetTo(), !side);
