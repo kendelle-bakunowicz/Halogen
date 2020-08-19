@@ -554,9 +554,9 @@ bool WhiteBlockade(uint64_t wPawns, uint64_t bPawns)
 			break; /* Fill has stopped, blockage? */
 		if (flood & above) /* break through? */
 			return false; /* yes, no blockage */
-		if (flood & bPawns) {
-			bPawns &= ~flood;  /* "capture" undefended black pawns */
-			fence = bPawns & (wPawns << 8);
+		if (flood & wPawns) {
+			wPawns &= ~flood;  /* "capture" undefended white pawns */
+			fence = wPawns & (bPawns << 8);
 			if (GetBitCount(fence) < 3)
 				return false;
 
