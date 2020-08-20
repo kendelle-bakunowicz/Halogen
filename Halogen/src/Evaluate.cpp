@@ -556,7 +556,7 @@ bool WhiteBlockade(uint64_t wPawns, uint64_t bPawns)
 			return false; /* yes, no blockage */
 		if (flood & wPawns) {
 			wPawns &= ~flood;  /* "capture" undefended white pawns */
-			fence = wPawns & (bPawns << 8);
+			fence = bPawns & (wPawns << 8);
 			if (GetBitCount(fence) < 3)
 				return false;
 
