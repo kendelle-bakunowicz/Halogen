@@ -123,7 +123,9 @@ int EvaluatePosition(const Position & position)
 	MidGame = MaterialMid + PieceSquaresMid + Castle + Tropism + pawnsMid + BishopPair + KnightAdj + RookAdj + RookFiles + tempo + mobility;
 	EndGame = MaterialEnd + PieceSquaresEnd + Castle + Tropism + pawnsEnd + BishopPair + KnightAdj + RookAdj + RookFiles + tempo + mobility;
 
-	return ((MidGame * (256 - GamePhase)) + (EndGame * GamePhase)) / 256;
+	int score = ((MidGame * (256 - GamePhase)) + (EndGame * GamePhase)) / 256;
+	double adjustedScore = static_cast<double>(score) / (1.0 + exp(0.1 * (static_cast<double>(position.GetFiftyMoveCount()) - 10.0))) * (1.0 + exp(-1.0));
+	return adjustedScore;
 }
 
 int Mobility(const Position& position)
