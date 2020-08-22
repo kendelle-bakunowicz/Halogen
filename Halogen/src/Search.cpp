@@ -21,7 +21,7 @@ bool IsPV(int beta, int alpha);
 void AddScoreToTable(int Score, int alphaOriginal, const Position& position, int depthRemaining, int distanceFromRoot, int beta, Move bestMove);
 void UpdateBounds(const TTEntry& entry, int& alpha, int& beta);
 int TerminalScore(const Position& position, int distanceFromRoot);
-int extension(Position & position, const Move& move, int alpha, int beta);
+int extension(Position & position, const Move& move, int alpha, int beta, bool inCheck);
 Move GetHashMove(const Position& position, int depthRemaining, int distanceFromRoot);
 Move GetHashMove(const Position& position, int distanceFromRoot);
 void AddKiller(Move move, int distanceFromRoot, std::vector<Killer>& KillerMoves);
@@ -492,6 +492,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	int Score = LowINF;
 	int a = alpha;
 	int b = beta;
+	bool InCheck = IsInCheck(position);
 
 	/*If a hash move exists, search with that move first and hope we can get a cutoff*/
 	Move hashMove = GetHashMove(position, distanceFromRoot);
@@ -499,7 +500,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	{
 		position.ApplyMove(hashMove);
 		tTable.PreFetch(position.GetZobristKey());							//load the transposition into l1 cache. ~5% speedup
-		int extendedDepth = depthRemaining + extension(position, hashMove, alpha, beta);
+		int extendedDepth = depthRemaining + extension(position, hashMove, alpha, beta, InCheck);
 		int newScore = -NegaScout(position, initialDepth, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true, locals, sharedData).GetScore();
 		position.RevertMove();
 
@@ -540,7 +541,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	if (position.GetFiftyMoveCount() >= 100) return 0;	//must make sure its not already checkmate
 	
 	OrderMoves(moves, position, distanceFromRoot, colour, locals);
-	bool InCheck = IsInCheck(position);
 	int staticScore = colour * EvaluatePosition(position);
 
 	if (hashMove.IsUninitialized() && depthRemaining > 3)
@@ -563,7 +563,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 			continue;
 		}
 
-		int extendedDepth = depthRemaining + extension(position, moves[i], alpha, beta);
+		int extendedDepth = depthRemaining + extension(position, moves[i], alpha, beta, InCheck);
 
 		//late move reductions
 		if (LMR(moves[i], InCheck, position, depthRemaining) && i > 3)
@@ -765,21 +765,21 @@ bool CheckForRep(Position& position)
 	return false;
 }
 
-int extension(Position& position, const Move& move, int alpha, int beta)
+int extension(Position& position, const Move& move, int alpha, int beta, bool inCheck)
 {
 	int extension = 0;
 
 	if (IsPV(beta, alpha))
 	{
-		if (IsSquareThreatened(position, position.GetKing(position.GetTurn()), position.GetTurn()))	
-			extension += 1;
+		if (inCheck || IsSquareThreatened(position, position.GetKing(position.GetTurn()), position.GetTurn()))	
+			extension = 1;
 	}
 	else
 	{
 		int SEE = see(position, move.GetTo(), position.GetTurn());
 
-		if (IsSquareThreatened(position, position.GetKing(position.GetTurn()), position.GetTurn()) && SEE == 0)	//move already applied so positive SEE bad
-			extension += 1;
+		if ((IsSquareThreatened(position, position.GetKing(position.GetTurn()), position.GetTurn()) && SEE == 0))	//move already applied so positive SEE bad
+			extension = 1;
 	}
 
 	if (position.GetSquare(move.GetTo()) == WHITE_PAWN && GetRank(move.GetTo()) == RANK_7)	//note the move has already been applied
