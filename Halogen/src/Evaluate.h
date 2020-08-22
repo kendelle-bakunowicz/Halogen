@@ -1,6 +1,7 @@
 #pragma once
 #include <fstream>
 #include <vector>
+#include <math.h>
 #include "PawnHashTable.h"
 #include "PieceSquareTables.h"
 
