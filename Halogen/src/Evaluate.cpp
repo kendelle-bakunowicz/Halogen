@@ -492,10 +492,17 @@ bool IsBlockade(const Position& position)
 /*addapted from chess programming wiki code example*/
 bool BlackBlockade(uint64_t wPawns, uint64_t bPawns) 
 {
+	bPawns &= ~((wPawns & ~(FileBB[FILE_A])) << 7);
+	bPawns &= ~((wPawns & ~(FileBB[FILE_H])) << 9);
+
 	uint64_t fence = wPawns & (bPawns >> 8);					//blocked white pawns
 	if (GetBitCount(fence) < 3)
 		return false;
 
+	fence |= wPawns & (fence >> 8);
+	fence |= wPawns & (fence >> 8);
+	fence |= wPawns & (fence >> 8);
+	fence |= wPawns & (fence >> 8);
 	fence |= ((bPawns & ~(FileBB[FILE_A])) >> 9);				//black pawn attacks
 	fence |= ((bPawns & ~(FileBB[FILE_H])) >> 7);
 
@@ -531,10 +538,17 @@ bool BlackBlockade(uint64_t wPawns, uint64_t bPawns)
 
 bool WhiteBlockade(uint64_t wPawns, uint64_t bPawns)
 {
+	wPawns &= ~((bPawns & ~(FileBB[FILE_A])) >> 9);
+	wPawns &= ~((bPawns & ~(FileBB[FILE_H])) >> 7);
+
 	uint64_t fence = bPawns & (wPawns << 8);					
 	if (GetBitCount(fence) < 3)
 		return false;
 
+	fence |= bPawns & (fence << 8);
+	fence |= bPawns & (fence << 8);
+	fence |= bPawns & (fence << 8);
+	fence |= bPawns & (fence << 8);
 	fence |= ((wPawns & ~(FileBB[FILE_A])) << 7);
 	fence |= ((wPawns & ~(FileBB[FILE_H])) << 9);
 
