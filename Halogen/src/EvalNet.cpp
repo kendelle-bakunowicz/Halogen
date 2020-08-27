@@ -54,7 +54,7 @@ Network* net;
 
 bool BlackBlockade(uint64_t wPawns, uint64_t bPawns);
 bool WhiteBlockade(uint64_t wPawns, uint64_t bPawns);
-Network* CreateRandom(std::vector<size_t> hiddenNeuronCount);
+Network* CreateBlank(std::vector<size_t> hiddenNeuronCount);
 std::vector<double> GetInputLayer(const Position& position);
 
 template<typename Numeric, typename Generator = std::mt19937>
@@ -70,15 +70,34 @@ std::vector<double> GetInputLayer(const Position& position)
 {
     std::vector<double> inputs;
 
-    for (int i = 0; i < N_PIECES; i++)
+    if (position.GetTurn() == WHITE || true)
     {
-        uint64_t bb = position.GetPieceBB(i);
-
-        for (int sq = 0; sq < N_SQUARES; sq++)
+        for (int i = 0; i < N_PIECES; i++)
         {
-            if ((i != WHITE_PAWN && i != BLACK_PAWN) || (GetRank(sq) > RANK_1 && GetRank(sq) < RANK_8))
-                inputs.push_back(bb % 2);
-            bb /= 2;
+            uint64_t bb = position.GetPieceBB(i);
+
+            for (int sq = 0; sq < N_SQUARES; sq++)
+            {
+                if ((i != WHITE_PAWN && i != BLACK_PAWN) || (GetRank(sq) > RANK_1 && GetRank(sq) < RANK_8))
+                    inputs.push_back((bb & SquareBB[sq]) != 0);
+            }
+        }
+    }
+    else
+    {
+        //for blacks move, we swap colours and flip board upside down
+
+        for (int i = 0; i < N_PIECES; i++)
+        {
+            uint64_t bb = position.GetPieceBB(Piece(i % N_PIECE_TYPES, i <= BLACK_KING));   
+
+            for (int sq = 0; sq < N_SQUARES; sq++)
+            {
+                unsigned int flipSq = GetPosition(GetFile(sq), RANK_8 - GetRank(sq));
+
+                if ((i != WHITE_PAWN && i != BLACK_PAWN) || (GetRank(flipSq) > RANK_1 && GetRank(flipSq) < RANK_8))
+                    inputs.push_back((bb & SquareBB[flipSq]) != 0);
+            }
         }
     }
 
@@ -103,8 +122,8 @@ bool InitEval(std::string file)
     if (!stream.is_open())
     {
         std::cout << "info string Could not load network file: " << file << std::endl;
-        std::cout << "info string random weights initialization!" << std::endl;
-        //net = CreateRandom({ 12 * 64 - 32, 1 });
+        std::cout << "info string zero weights initialization!" << std::endl;
+        net = CreateBlank({ 12 * 64 - 32, 1 });
         return false;
     }
 
@@ -493,7 +512,7 @@ std::vector<std::pair<Position, double>> Network::quietlabeledDataset()
     return positions;
 }
 
-Network* CreateRandom(std::vector<size_t> NeuronCount)
+Network* CreateBlank(std::vector<size_t> NeuronCount)
 {
     std::vector<std::vector<double>> inputs;
 
@@ -504,7 +523,7 @@ Network* CreateRandom(std::vector<size_t> NeuronCount)
         std::vector<double> input;
         for (int i = 0; i < (prevLayerNeurons + 1) * NeuronCount[layer]; i++)
         {
-            input.push_back(random<double>(0, 1));
+            input.push_back(0);
         }
         inputs.push_back(input);
         prevLayerNeurons = NeuronCount[layer];
@@ -514,7 +533,7 @@ Network* CreateRandom(std::vector<size_t> NeuronCount)
     std::vector<double> input;
     for (int i = 0; i < (prevLayerNeurons + 1) * NeuronCount.back(); i++)
     {
-        input.push_back(random<double>(0, 1));
+        input.push_back(0);
     }
     inputs.push_back(input);
 
