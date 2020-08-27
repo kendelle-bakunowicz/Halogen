@@ -63,14 +63,14 @@ Numeric random(Numeric from, Numeric to);
 int EvaluatePositionNet(const Position& position)
 {
     assert(net != nullptr);
-    return net->FeedForward(GetInputLayer(position));
+    return (position.GetTurn() ? 1 : -1) * net->FeedForward(GetInputLayer(position));
 }
 
 std::vector<double> GetInputLayer(const Position& position)
 {
     std::vector<double> inputs;
 
-    if (position.GetTurn() == WHITE || true)
+    if (position.GetTurn() == WHITE)
     {
         for (int i = 0; i < N_PIECES; i++)
         {
@@ -487,11 +487,11 @@ std::vector<std::pair<Position, double>> Network::quietlabeledDataset()
 
         if (result == "\"0-1\";")
         {
-            positions.push_back({ position, 0 });
+            positions.push_back({ position, 1 - position.GetTurn() });
         }
         else if (result == "\"1-0\";")
         {
-            positions.push_back({ position, 1 });
+            positions.push_back({ position, position.GetTurn() });
         }
         else if (result == "\"1/2-1/2\";")
         {
