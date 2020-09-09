@@ -2,7 +2,7 @@
 
 void Learn()
 {
-    Network net = InitNetwork("C:\\HalogenWeights\\RNC1cVNovG.network");
+    Network net = InitNetwork("");
     net.Learn();
 }
 
@@ -14,7 +14,7 @@ Network InitNetwork(std::string file)
     {
         std::cout << "info string Could not load network file: " << file << std::endl;
         std::cout << "info string random weights initialization!" << std::endl;
-        return CreateRandom({ INPUT_NEURONS, 256, 1 });
+        return CreateRandom({ INPUT_NEURONS, 64, 1 });
     }
 
     std::string line;
@@ -104,13 +104,13 @@ void Neuron::Backpropogate(float delta_l, const std::vector<float>& prev_weights
     {
         float new_grad = delta_l * std::max(0.f, prev_weights.at(weight)); //ReLU activation calculated here
 
-        grad.at(weight) += new_grad * new_grad;
-        weights.at(weight) -= new_grad * learnRate / sqrtf(grad.at(weight) + 1e-8f);
+        grad.at(weight) = 0.95 * grad.at(weight) + 0.05 * (new_grad * new_grad);
+        weights.at(weight) -= new_grad * learnRate / sqrt(grad.at(weight) + 10e-8);
     }
 
     float new_grad = delta_l;
-    grad.at(weights.size()) += new_grad * new_grad;
-    bias -= new_grad * learnRate / sqrtf(grad.at(weights.size()) + 1e-8f);
+    grad.at(weights.size()) = 0.95 * grad.at(weights.size()) + 0.05 * (new_grad * new_grad);
+    bias -= new_grad * learnRate / sqrt(grad.at(weights.size()) + 10e-8);
 }
 
 void Neuron::WriteToFile(std::ofstream& myfile)
@@ -336,16 +336,16 @@ void Network::Learn()
 
         float error = 0;
 
-        for (size_t point = 0; point < data.size() / 10; point++)
+        for (size_t point = 0; point < data.size(); point++)
         {
-            error += Backpropagate(data[point], 0.1f);
+            error += Backpropagate(data[point], 0.001);
         }
 
-        error /= data.size() / 10;
+        error /= data.size();
 
         std::cout << "Finished epoch: " << epoch << " MSE: " << 2 * error << std::endl;
 
-        if (epoch % 100 == 0)
+        if (epoch % 10 == 0)
             WriteToFile();
     }
 
