@@ -1,5 +1,12 @@
 #include "Network.h"
 
+//ADAM hyperparamiters:
+
+const float beta_1 = 0.9f;
+const float beta_2 = 0.999f;
+const float learn_rate = 0.001f;
+const float epsilon = 1e-8f;
+
 void Learn()
 {
     Network net = InitNetwork("");
@@ -79,9 +86,10 @@ Network InitNetwork(std::string file)
     return Network(weights, LayerNeurons);
 }
 
-Neuron::Neuron(const std::vector<float>& Weight, float Bias) : weights(Weight), grad(Weight.size() + 1, 0)
+Neuron::Neuron(const std::vector<float>& Weight, float Bias) : weights(Weight), m_t(Weight.size() + 1, 0), v_t(Weight.size() + 1, 0)
 {
     bias = Bias;
+    t = 0;
 }
 
 float Neuron::FeedForward(std::vector<float>& input) const
@@ -100,17 +108,51 @@ float Neuron::FeedForward(std::vector<float>& input) const
 
 void Neuron::Backpropogate(float delta_l, const std::vector<float>& prev_weights, float learnRate)
 {
+    t = t + 1;
+
     for (size_t weight = 0; weight < weights.size(); weight++)
     {
-        float new_grad = delta_l * std::max(0.f, prev_weights.at(weight)); //ReLU activation calculated here
+        //calculate gradient g
+        float g = delta_l * std::max(0.f, prev_weights[weight]); //ReLU activation calculated here
 
-        grad.at(weight) = 0.95 * grad.at(weight) + 0.05 * (new_grad * new_grad);
-        weights.at(weight) -= new_grad * learnRate / sqrt(grad.at(weight) + 10e-8);
+        //update adam paramiters
+        m_t[weight] = beta_1 * m_t[weight] + (1 - beta_1) * g;
+        v_t[weight] = beta_2 * v_t[weight] + (1 - beta_2) * g * g;
+
+        float m = m_t[weight];
+        float v = v_t[weight];
+
+        if (t < 10000)
+        {
+            //Bias correction. Note for large t (>10000) the denominator approaches one and we can ignore the correction from them on
+            float m = m_t[weight] / (1 - powf(beta_1, t));
+            float v = v_t[weight] / (1 - powf(beta_2, t));
+        }
+
+        //update weight
+        weights[weight] -= learnRate * m / (sqrt(v) + epsilon);
     }
 
-    float new_grad = delta_l;
-    grad.at(weights.size()) = 0.95 * grad.at(weights.size()) + 0.05 * (new_grad * new_grad);
-    bias -= new_grad * learnRate / sqrt(grad.at(weights.size()) + 10e-8);
+
+    //calculate gradient g
+    float g = delta_l;
+
+    //update adam paramiters
+    m_t[weights.size()] = beta_1 * m_t[weights.size()] + (1 - beta_1) * g;
+    v_t[weights.size()] = beta_2 * v_t[weights.size()] + (1 - beta_2) * g * g;
+
+    float m = m_t[weights.size()];
+    float v = v_t[weights.size()];
+
+    if (t < 10000)
+    {
+        //Bias correction. Note for large t (>10000) the denominator approaches one and we can ignore the correction from them on
+        float m = m_t[weights.size()] / (1 - powf(beta_1, t));
+        float v = v_t[weights.size()] / (1 - powf(beta_2, t));
+    }
+
+    //update weight
+    bias -= learnRate * m / (sqrt(v) + epsilon);
 }
 
 void Neuron::WriteToFile(std::ofstream& myfile)
@@ -238,7 +280,7 @@ float Network::Backpropagate(trainingPoint data, float learnRate)
     std::vector<float> inputParams(data.inputs.begin(), data.inputs.end());
 
     FeedForward(inputParams);
-    //return 0.5 * (alpha - data.result) * (alpha - data.result);   //if you just want to calculate error without training then do this
+    return 0.5 * (alpha - data.result) * (alpha - data.result);   //if you just want to calculate error without training then do this
 
     //we choose a vector for this because delta_l will have a value for each neuron in the layer later
     std::vector<float> delta_l = { 0.0087f * (alpha - data.result) * (alpha) * (1 - alpha) }; //0.0087 chosen to mymic the previous evaluation function
@@ -338,7 +380,7 @@ void Network::Learn()
 
         for (size_t point = 0; point < data.size(); point++)
         {
-            error += Backpropagate(data[point], 0.001);
+            error += Backpropagate(data[point], learn_rate);
         }
 
         error /= data.size();

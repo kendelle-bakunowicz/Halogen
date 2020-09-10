@@ -36,7 +36,12 @@ struct Neuron
     std::vector<float> weights;
     float bias;
 
-    std::vector<float> grad;       //for adagrad
+    //std::vector<float> grad;       //for adagrad
+
+    //for adam optimizer:
+    uint64_t t;
+    std::vector<float> m_t;
+    std::vector<float> v_t;
 };
 
 struct HiddenLayer
