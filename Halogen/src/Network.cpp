@@ -187,23 +187,6 @@ std::vector<float> HiddenLayer::activationPrime(std::vector<float> x)
     return ret;
 }
 
-void HiddenLayer::ApplyDelta(std::vector<deltaPoint>& deltaVec, float forward)
-{
-    size_t neuronCount = zeta.size();
-    size_t deltaCount = deltaVec.size();
-
-    for (size_t index = 0; index < deltaCount; index++)
-    {
-        float deltaValue = deltaVec[index].delta * forward;
-        size_t weightTransposeIndex = deltaVec[index].index * neuronCount;
-
-        for (size_t neuron = 0; neuron < neuronCount; neuron++)
-        {
-            zeta[neuron] += weightTranspose[weightTransposeIndex + neuron] * deltaValue;
-        }
-    }
-}
-
 Network::Network(std::vector<std::vector<float>> inputs, std::vector<size_t> NeuronCount) : outputNeuron(std::vector<float>(inputs.back().begin(), inputs.back().end() - 1), inputs.back().back())
 {
     assert(inputs.size() == NeuronCount.size());
@@ -352,33 +335,6 @@ void Network::Learn()
     WriteToFile();
 }
 
-void Network::ApplyDelta(std::vector<deltaPoint>& delta)
-{
-    assert(hiddenLayers.size() > 0);
-    hiddenLayers[0].ApplyDelta(delta, 1);
-}
-
-void Network::ApplyInverseDelta(std::vector<deltaPoint>& delta)
-{
-    assert(hiddenLayers.size() > 0);
-    hiddenLayers[0].ApplyDelta(delta, -1);
-}
-
-float Network::QuickEval()
-{
-    std::vector<float>& inputs = hiddenLayers.at(0).zeta;
-
-    for (size_t i = 1; i < hiddenLayers.size(); i++)    //skip first layer
-    {
-        inputs = hiddenLayers.at(i).FeedForward(inputs);
-    }
-
-    zeta = outputNeuron.FeedForward(inputs);
-    alpha = 1 / (1 + expf(-0.0087f * zeta));  //-0.0087 chosen to mymic the previous evaluation function
-
-    return zeta;
-}
-
 trainingPoint::trainingPoint(std::array<bool, INPUT_NEURONS> input, float gameResult) : inputs(input)
 {
     result = gameResult;
@@ -443,4 +399,76 @@ void Network::AddExtraNullLayer(size_t neurons)
     }
 
     hiddenLayers.push_back(HiddenLayer(weights, neurons));
+}
+
+QuantizedNetwork::QuantizedNetwork()
+{
+}
+
+QuantizedNetwork::~QuantizedNetwork()
+{
+}
+
+int QuantizedNetwork::QuickEval()
+{
+    std::vector<FixedReal> weightedInput = zeta;
+    std::vector<FixedReal> next;
+
+    for (auto layer = weights.begin() + 1; layer != weights.end(); ++layer)
+    {
+        FeedForward(layer, next, weightedInput);
+    }
+
+    return static_cast<int>(std::round(weightedInput[0].toDouble()));
+}
+
+void QuantizedNetwork::FeedForward(std::vector<std::vector<std::vector<FixedReal>>>::iterator& layer, std::vector<FixedReal>& next, std::vector<FixedReal>& zeta)
+{
+    for (auto neuron = layer->begin(); neuron != layer->end(); ++neuron)
+    {
+        next.push_back(0);
+
+        for (auto weight = neuron->begin(); weight != neuron->end(); ++weight)
+        {
+            next[neuron - layer->begin()] += (*weight) * std::max(FixedReal(0), zeta[weight - neuron->begin()]);    //ReLU activation done here
+        }
+    }
+
+    zeta = next;
+    next.clear();
+}
+
+int QuantizedNetwork::Eval(std::vector<int>& inputs)
+{
+    std::vector<FixedReal> weightedInput(inputs.begin(), inputs.end());
+    std::vector<FixedReal> next;
+
+    for (auto layer = weights.begin(); layer != weights.end(); ++layer)
+    {
+        FeedForward(layer, next, weightedInput);
+    }
+
+    return static_cast<int>(std::round(weightedInput[0].toDouble()));
+}
+
+void QuantizedNetwork::ApplyDelta(std::vector<deltaPoint>& deltaVec)
+{
+    size_t neuronCount = zeta.size();
+    size_t deltaCount = deltaVec.size();
+
+    for (size_t index = 0; index < deltaCount; index++)
+    {
+        float deltaValue = deltaVec[index].delta * forward;
+        size_t weightTransposeIndex = deltaVec[index].index * neuronCount;
+
+        for (size_t neuron = 0; neuron < neuronCount; neuron++)
+        {
+            zeta[neuron] += weightTranspose[weightTransposeIndex + neuron] * deltaValue;
+        }
+    }
+}
+
+void QuantizedNetwork::ApplyInverseDelta(std::vector<deltaPoint>& delta)
+{
+
 }

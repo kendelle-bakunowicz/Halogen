@@ -9,8 +9,11 @@
 #include <numeric>
 #include <algorithm>
 #include <sstream>
+#include "fixed.h"
 
 #define INPUT_NEURONS 12 * 64 - 32 + 1 + 4
+
+typedef BasicFixedReal<10> FixedReal;
 
 struct trainingPoint
 {
@@ -52,8 +55,6 @@ struct HiddenLayer
     std::vector<float> zeta;    //weighted input     
     static std::vector<float> activationPrime(std::vector<float> x);
 
-    void ApplyDelta(std::vector<deltaPoint>& deltaVec, float forward);            //incrementally update the connections between input layer and first hidden layer
-
 private:
 
     std::vector<float> weightTranspose; //first neuron first weight, second neuron first weight etc...
@@ -66,10 +67,6 @@ struct Network
     float Backpropagate(trainingPoint data, float learnRate);
     void WriteToFile();
     void Learn();
-
-    void ApplyDelta(std::vector<deltaPoint>& delta);            //incrementally update the connections between input layer and first hidden layer
-    void ApplyInverseDelta(std::vector<deltaPoint>& delta);     //for un-make moves
-    float QuickEval();                                                         //when used with above, this just calculates starting from the alpha of first hidden layer and skips input -> hidden
 
 private:
     static std::vector<trainingPoint> quietlabeledDataset();
@@ -84,6 +81,27 @@ private:
 
     std::vector<HiddenLayer> hiddenLayers;
     Neuron outputNeuron;
+};
+
+class QuantizedNetwork
+{
+public:
+    QuantizedNetwork();
+    ~QuantizedNetwork();
+
+    int QuickEval();
+    int Eval(std::vector<int>& inputs);
+
+    void ApplyDelta(std::vector<deltaPoint>& deltaVec);
+    void ApplyInverseDelta(std::vector<deltaPoint>& deltaVec);
+
+private:
+    std::vector<FixedReal> zeta;                                //The incrementally updated output of the first hidden layer (without ReLU activation)                    
+    std::vector<std::vector<std::vector<FixedReal>>> weights;   //by layer, by neuron, by weight
+
+    void FeedForward(std::vector<std::vector<std::vector<FixedReal>>>::iterator& layer, std::vector<FixedReal>& next, std::vector<FixedReal>& zeta);
+
+
 };
 
 void Learn();

@@ -50,7 +50,7 @@ public:
 	void ApplySEECapture(Move move);	//does ApplyMove functionality but much quicker. Only for use within see() and seeAttack()
 	void RevertSEECapture();			//does RevertMove functionality but much quicker. Only for use within see() and seeAttack()
 
-	Network net;
+	QuantizedNetwork net;
 
 	float GetEvaluation();
 
