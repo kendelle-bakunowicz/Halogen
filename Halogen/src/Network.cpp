@@ -280,7 +280,7 @@ float Network::Backpropagate(trainingPoint data, float learnRate)
     std::vector<float> inputParams(data.inputs.begin(), data.inputs.end());
 
     FeedForward(inputParams);
-    return 0.5 * (alpha - data.result) * (alpha - data.result);   //if you just want to calculate error without training then do this
+    //return 0.5 * (alpha - data.result) * (alpha - data.result);   //if you just want to calculate error without training then do this
 
     //we choose a vector for this because delta_l will have a value for each neuron in the layer later
     std::vector<float> delta_l = { 0.0087f * (alpha - data.result) * (alpha) * (1 - alpha) }; //0.0087 chosen to mymic the previous evaluation function
