@@ -135,9 +135,11 @@ HiddenLayer::HiddenLayer(std::vector<real> inputs, size_t NeuronCount)
 
     for (size_t i = 0; i < WeightsPerNeuron - 1; i++)
     {
+        weightTranspose.push_back({});
+
         for (size_t j = 0; j < NeuronCount; j++)
         {
-            weightTranspose.push_back(neurons.at(j).weights.at(i));
+            weightTranspose[i].push_back(neurons.at(j).weights.at(i));
         }
     }
 
@@ -187,19 +189,19 @@ std::vector<real> HiddenLayer::activationPrime(std::vector<real> x)
     return ret;
 }
 
-void HiddenLayer::ApplyDelta(std::vector<deltaPoint>& deltaVec, real forward)
+void HiddenLayer::ApplyDelta(std::vector<deltaPoint>& deltaVec, int forward)
 {
     size_t neuronCount = zeta.size();
     size_t deltaCount = deltaVec.size();
 
-    for (size_t index = 0; index < deltaCount; index++)
+    for (size_t index = 0; index < deltaCount; ++index)
     {
-        real deltaValue = deltaVec[index].delta * forward;
-        size_t weightTransposeIndex = deltaVec[index].index * neuronCount;
+        int deltaValue = deltaVec[index].delta * forward;
+        std::vector<real>& weightTransposeIndex = weightTranspose[deltaVec[index].index];
 
-        for (size_t neuron = 0; neuron < neuronCount; neuron++)
+        for (size_t neuron = 0; neuron < neuronCount; ++neuron)
         {
-            zeta[neuron] += weightTranspose[weightTransposeIndex + neuron] * deltaValue;
+            zeta[neuron] += weightTransposeIndex[neuron] * deltaValue;
         }
     }
 }
@@ -374,8 +376,6 @@ real Network::QuickEval()
     }
 
     zeta = outputNeuron.FeedForward(inputs);
-    alpha = 1 / (1 + exp(-0.0087 * zeta.toDouble()));  //-0.0087 chosen to mymic the previous evaluation function
-
     return zeta;
 }
 

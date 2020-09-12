@@ -55,11 +55,11 @@ struct HiddenLayer
     std::vector<real> zeta;    //weighted input     
     static std::vector<real> activationPrime(std::vector<real> x);
 
-    void ApplyDelta(std::vector<deltaPoint>& deltaVec, real forward);            //incrementally update the connections between input layer and first hidden layer
+    void ApplyDelta(std::vector<deltaPoint>& deltaVec, int forward);            //incrementally update the connections between input layer and first hidden layer
 
 private:
 
-    std::vector<real> weightTranspose; //first neuron first weight, second neuron first weight etc...
+    std::vector<std::vector<real>> weightTranspose; //first neuron first weight, second neuron first weight etc...
 };
 
 struct Network
