@@ -42,6 +42,7 @@
     <ClInclude Include="..\src\BitBoardDefine.h" />
     <ClInclude Include="..\src\BoardParamiters.h" />
     <ClInclude Include="..\src\EvalNet.h" />
+    <ClInclude Include="..\src\fixed.h" />
     <ClInclude Include="..\src\Move.h" />
     <ClInclude Include="..\src\MoveGeneration.h" />
     <ClInclude Include="..\src\Network.h" />

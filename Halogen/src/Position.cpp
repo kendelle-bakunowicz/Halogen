@@ -431,9 +431,9 @@ uint64_t Position::IncrementZobristKey(Move move)
 	return key;
 }
 
-std::vector<float> Position::GetInputLayer() const
+std::vector<real> Position::GetInputLayer() const
 {
-	std::vector<float> ret;
+	std::vector<real> ret;
 	ret.reserve(INPUT_NEURONS);
 
 	for (int i = 0; i < N_PIECES; i++)
@@ -551,9 +551,7 @@ void Position::RevertSEECapture()
 	RestorePreviousBoard();
 }
 
-float Position::GetEvaluation()
+int Position::GetEvaluation()
 {
-	//if (abs(net.QuickEval() - net.FeedForward(GetInputLayer())) > 0.001)
-	//	std::cout << "ERROR!";
-	return net.QuickEval();
+	return static_cast<int>(round(net.QuickEval().toDouble()));
 }
