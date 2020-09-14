@@ -1,6 +1,6 @@
 #include "TimeManage.h"
 
-std::atomic<bool> KeepSearching;
+std::atomic<bool> KeepSearching = true;
 
 Timer::Timer() : Begin(clock()), End(clock())
 {

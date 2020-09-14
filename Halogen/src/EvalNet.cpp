@@ -5,7 +5,6 @@ int pieceValueVector[N_STAGES][N_PIECE_TYPES] = { {91, 532, 568, 715, 1279, 5000
 
 bool BlackBlockade(uint64_t wPawns, uint64_t bPawns);
 bool WhiteBlockade(uint64_t wPawns, uint64_t bPawns);
-std::array<bool, INPUT_NEURONS> GetInputLayerCache(const Position& position); //for training (takes 1/8th the space)
 
 int EvaluatePositionNet(Position& position)
 {
@@ -178,83 +177,6 @@ std::vector<trainingPoint> Network::Stockfish3PerDataset()
             positions.push_back({ GetInputLayerCache(position), 1 });
         }
         else if (result == "1/2-1/2")
-        {
-            positions.push_back({ GetInputLayerCache(position), 0.5 });
-        }
-        else
-        {
-            std::cout << "line " << lineCount + 1 << ": Could not read result" << std::endl;
-        }
-
-        quietCount++;
-        lineCount++;
-    }
-
-    std::cout << "Reading line: " << lineCount << " quiet positions: " << quietCount << "\r";
-    std::cout << "\nAll positions loaded successfully" << std::endl;
-
-    return positions;
-}
-
-std::vector<trainingPoint> Network::etherData()
-{
-    //Used with permission by Andrew Grant author of Ethereal.
-
-    std::ifstream infile("C:\\HalogenTraining\\E12.41-1M-D12-Resolved.book");
-
-    if (!infile)
-    {
-        std::cout << "Cannot open position file!" << std::endl;
-        return {};
-    }
-
-    std::string line;
-    int lineCount = 0;
-    int quietCount = 0;
-
-    std::cout << "Beginning to read in positions..." << std::endl;
-
-    std::vector<trainingPoint> positions;
-    Position position;
-
-    while (std::getline(infile, line))
-    {
-        if (lineCount % 10000 == 0)
-            std::cout << "Reading line: " << lineCount << " quiet positions: " << quietCount << "\r";
-
-        std::vector<std::string> arrayTokens;
-        std::istringstream iss(line);
-        arrayTokens.clear();
-        std::string result;
-
-        do
-        {
-            std::string stub;
-            iss >> stub;
-
-            if (stub == "[0.0]" || stub == "[0.5]" || stub == "[1.0]")
-            {
-                result = stub;
-                break;
-            }
-
-            arrayTokens.push_back(stub);
-        } while (iss);
-
-        if (!position.InitialiseFromFen(arrayTokens))
-        {
-            std::cout << "line " << lineCount + 1 << ": BAD FEN" << std::endl;
-        }
-
-        if (result == "[0.0]")
-        {
-            positions.push_back({ GetInputLayerCache(position), 0 });
-        }
-        else if (result == "[1.0]")
-        {
-            positions.push_back({ GetInputLayerCache(position), 1 });
-        }
-        else if (result == "[0.5]")
         {
             positions.push_back({ GetInputLayerCache(position), 0.5 });
         }

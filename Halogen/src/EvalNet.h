@@ -15,3 +15,7 @@ int EvaluatePositionNet(Position& position);
 
 int PieceValues(unsigned int Piece, GameStages GameStage = MIDGAME);
 
+
+
+std::array<bool, INPUT_NEURONS> GetInputLayerCache(const Position& position); //for training (takes 1/8th the space)
+

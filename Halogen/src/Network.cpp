@@ -7,6 +7,8 @@ const float beta_2 = 0.999f;
 const float learn_rate = 0.001f;
 const float epsilon = 1e-8f;
 
+float FastInvSqrt(float x);
+
 void Learn()
 {
     Network net = InitNetwork("");
@@ -109,8 +111,9 @@ float Neuron::FeedForward(std::vector<float>& input) const
 void Neuron::Backpropogate(float delta_l, const std::vector<float>& prev_weights, float learnRate)
 {
     t = t + 1;
+    size_t max = weights.size();
 
-    for (size_t weight = 0; weight < weights.size(); weight++)
+    for (size_t weight = 0; weight < max; weight++)
     {
         //calculate gradient g
         float g = delta_l * std::max(0.f, prev_weights[weight]); //ReLU activation calculated here
@@ -125,12 +128,12 @@ void Neuron::Backpropogate(float delta_l, const std::vector<float>& prev_weights
         if (t < 10000)
         {
             //Bias correction. Note for large t (>10000) the denominator approaches one and we can ignore the correction from them on
-            float m = m_t[weight] / (1 - powf(beta_1, t));
-            float v = v_t[weight] / (1 - powf(beta_2, t));
+            m = m_t[weight] / (1 - powf(beta_1, t));
+            v = v_t[weight] / (1 - powf(beta_2, t));
         }
 
         //update weight
-        weights[weight] -= learnRate * m / (sqrt(v) + epsilon);
+        weights[weight] -= learnRate * m * (FastInvSqrt(v + epsilon));
     }
 
 
@@ -147,12 +150,12 @@ void Neuron::Backpropogate(float delta_l, const std::vector<float>& prev_weights
     if (t < 10000)
     {
         //Bias correction. Note for large t (>10000) the denominator approaches one and we can ignore the correction from them on
-        float m = m_t[weights.size()] / (1 - powf(beta_1, t));
-        float v = v_t[weights.size()] / (1 - powf(beta_2, t));
+        m = m_t[weights.size()] / (1 - powf(beta_1, t));
+        v = v_t[weights.size()] / (1 - powf(beta_2, t));
     }
 
     //update weight
-    bias -= learnRate * m / (sqrt(v) + epsilon);
+    bias -= learnRate * m * (FastInvSqrt(v + epsilon));
 }
 
 void Neuron::WriteToFile(std::ofstream& myfile)
@@ -486,4 +489,15 @@ void Network::AddExtraNullLayer(size_t neurons)
     }
 
     hiddenLayers.push_back(HiddenLayer(weights, neurons));
+}
+
+/** Test implementation from https://habrahabr.ru/company/infopulse/blog/336110/
+*/
+float FastInvSqrt(float x)
+{
+    float xhalf = 0.5f * x;
+    int i = *(int*)&x;
+    i = 0x5f3759df - (i >> 1);
+    x = *(float*)&i;  x = x * (1.5f - (xhalf * x * x));
+    return x;
 }
