@@ -79,6 +79,7 @@ struct Network
 private:
     static std::vector<trainingPoint> quietlabeledDataset();
     static std::vector<trainingPoint> Stockfish3PerDataset();
+    static std::vector<trainingPoint> etherData();
     size_t inputNeurons;
 
     void AddExtraNullLayer(size_t neurons);   //given a network add another hidden layer at the end that wont change network output.

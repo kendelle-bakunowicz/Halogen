@@ -21,7 +21,7 @@ Network InitNetwork(std::string file)
     {
         std::cout << "info string Could not load network file: " << file << std::endl;
         std::cout << "info string random weights initialization!" << std::endl;
-        return CreateRandom({ INPUT_NEURONS, 64, 1 });
+        return CreateRandom({ INPUT_NEURONS, 32, 1 });
     }
 
     std::string line;
@@ -369,7 +369,8 @@ void Network::Learn()
     //WriteToFile();
 
     //std::vector<trainingPoint> data = Stockfish3PerDataset();
-    std::vector<trainingPoint> data = quietlabeledDataset();
+    //std::vector<trainingPoint> data = quietlabeledDataset();
+    std::vector<trainingPoint> data = etherData();
 
     for (int epoch = 1; epoch <= 100000; epoch++)
     {
@@ -387,7 +388,7 @@ void Network::Learn()
 
         std::cout << "Finished epoch: " << epoch << " MSE: " << 2 * error << std::endl;
 
-        if (epoch % 10 == 0)
+        //if (epoch % 10 == 0)
             WriteToFile();
     }
 
