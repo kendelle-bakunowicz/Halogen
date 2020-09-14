@@ -9,6 +9,7 @@ void PrintVersion();
 uint64_t PerftDivide(unsigned int depth, Position& position);
 uint64_t Perft(unsigned int depth, Position& position);
 void Bench();
+int ProcessDataForPyTorch();
 
 string version = "6-20200820-2351"; 
 
@@ -16,6 +17,8 @@ void TestSyzygy();
 
 int main(int argc, char* argv[])
 {
+	KeepSearching = true;
+
 	srand(time(NULL));
 
 	PrintVersion();
@@ -39,6 +42,8 @@ int main(int argc, char* argv[])
 	position.StartingPosition();
 
 	unsigned int ThreadCount = 1;
+
+	//ProcessDataForPyTorch();
 
 	if (argc == 2 && strcmp(argv[1], "bench") == 0) { Bench(); return 0; }	//currently only supports bench from command line for openBench integration
 
@@ -494,4 +499,42 @@ std::vector<trainingPoint> Network::etherData()
 	std::cout << "\nAll positions loaded successfully" << std::endl;
 
 	return positions;
+}
+
+int ProcessDataForPyTorch()
+{
+	char line[256];
+	FILE* fin = fopen("C:\\Users\\kiere\\Downloads\\Ethereal3\\Ethereal3.fens", "r");
+
+	Position position;
+
+	while (1) {
+
+		if (fgets(line, 256, fin) == NULL)
+			return 1;
+
+		position.InitialiseFromFen(line);
+
+		for (int i = 0; i < N_PIECES; i++)
+		{
+			uint64_t bb = position.GetPieceBB(i);
+
+			for (int sq = 0; sq < N_SQUARES; sq++)
+			{
+				if ((i != WHITE_PAWN && i != BLACK_PAWN) || (GetRank(sq) > RANK_1 && GetRank(sq) < RANK_8))
+					printf("%d ", ((bb & SquareBB[sq]) != 0));
+			}
+		}
+
+		printf("%d ", (position.GetTurn()));
+		printf("%d ", (position.CanCastleWhiteKingside()));
+		printf("%d ", (position.CanCastleWhiteQueenside()));
+		printf("%d ", (position.CanCastleBlackKingside()));
+		printf("%d ", (position.CanCastleBlackQueenside()));
+
+		// Find the result { W, L, D } => { 1.0, 0.0, 0.5 }
+		if (strstr(line, "1-0")) printf("1.0\n");
+		else if (strstr(line, "0-1")) printf("0.0\n");
+		else if (strstr(line, "1/2-1/2")) printf("0.5\n");
+	}
 }
