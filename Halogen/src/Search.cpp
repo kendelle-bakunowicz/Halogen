@@ -71,7 +71,7 @@ uint64_t BenchSearch(const Position& position, int maxSearchDepth)
 {
 	InitSearch();
 	tTable.ResetTable();
-	ThreadSharedData sharedData(1, true);
+	ThreadSharedData sharedData(1, false);
 	
 	uint64_t nodesSearched = 0;
 	SearchPosition(position, 2147483647, nodesSearched, sharedData, 0, maxSearchDepth);

@@ -9,7 +9,9 @@ std::array<bool, INPUT_NEURONS> GetInputLayerCache(const Position& position); //
 
 int EvaluatePositionNet(Position& position)
 {
-    return std::min(4000, std::max(-4000, static_cast<int>(std::round(position.GetEvaluation()))));
+    float modifiedValue = position.GetEvaluation() / 0.0087;
+
+    return std::min(4000, std::max(-4000, static_cast<int>(std::round(modifiedValue))));
 }
 
 std::array<bool, INPUT_NEURONS> GetInputLayerCache(const Position& position)
