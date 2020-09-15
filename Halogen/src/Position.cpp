@@ -266,8 +266,8 @@ bool Position::InitialiseFromFen(std::vector<std::string> fen)
 	if (!InitialiseParamitersFromFen(fen))
 		return false;
 
-	key = GenerateZobristKey();
-	net.FeedForward(GetInputLayer());
+	//key = GenerateZobristKey();
+	//net.FeedForward(GetInputLayer());
 
 	return true;
 }

@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 
 	srand(time(NULL));
 
-	PrintVersion();
+	//PrintVersion();
 	tb_init("<empty>");
 
 	unsigned long long init[4] = { 0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL }, length = 4;
@@ -43,7 +43,8 @@ int main(int argc, char* argv[])
 
 	unsigned int ThreadCount = 1;
 
-	//ProcessDataForPyTorch();
+	ProcessDataForPyTorch();
+	return 0;
 
 	if (argc == 2 && strcmp(argv[1], "bench") == 0) { Bench(); return 0; }	//currently only supports bench from command line for openBench integration
 
@@ -533,8 +534,10 @@ int ProcessDataForPyTorch()
 		printf("%d ", (position.CanCastleBlackQueenside()));
 
 		// Find the result { W, L, D } => { 1.0, 0.0, 0.5 }
-		if (strstr(line, "1-0")) printf("1.0\n");
-		else if (strstr(line, "0-1")) printf("0.0\n");
-		else if (strstr(line, "1/2-1/2")) printf("0.5\n");
+		if (strstr(line, "1-0")) printf("1.0");
+		else if (strstr(line, "0-1")) printf("0.0");
+		else if (strstr(line, "1/2-1/2")) printf("0.5");
+
+		printf(" 0\n");
 	}
 }
