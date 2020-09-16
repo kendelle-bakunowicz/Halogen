@@ -90,6 +90,21 @@ int TexelSearch(Position& position, SearchData& data)
 	return Quiescence(position, 1, LowINF, HighINF, 1, 0, 0, data, sharedData).GetScore();
 }
 
+bool PositionHasWinningCapture(Position& position)
+{
+	uint64_t other = position.GetPiecesColour(!position.GetTurn());
+
+	while (other != 0)
+	{
+		int sq = bitScanForwardErase(other);
+
+		if (see(position, sq, position.GetTurn()) > 0)
+			return true;
+	}
+
+	return false;
+}
+
 void InitSearch()
 {
 	KeepSearching = true;

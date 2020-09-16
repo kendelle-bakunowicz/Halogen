@@ -85,4 +85,5 @@ Move MultithreadedSearch(const Position& position, int allowedTimeMs, unsigned i
 uint64_t BenchSearch(const Position& position, int maxSearchDepth = MAX_DEPTH);
 
 int TexelSearch(Position& position, SearchData& data);
+bool PositionHasWinningCapture(Position& position);
 

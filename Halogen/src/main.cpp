@@ -423,7 +423,7 @@ int ProcessDataForPyTorch()
 
 		position.InitialiseFromFen(line);
 
-		if (EvaluatePosition(position) != TexelSearch(position, data))
+		if (PositionHasWinningCapture(position))
 			continue;
 
 		for (int i = 0; i < N_PIECES; i++)
