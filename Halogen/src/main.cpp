@@ -426,6 +426,12 @@ int ProcessDataForPyTorch()
 		if (PositionHasWinningCapture(position))
 			continue;
 
+		if (EvaluatePosition(position) != TexelSearch(position, data))
+			continue;
+
+		if (IsInCheck(position))
+			continue;
+
 		for (int i = 0; i < N_PIECES; i++)
 		{
 			uint64_t bb = position.GetPieceBB(i);
