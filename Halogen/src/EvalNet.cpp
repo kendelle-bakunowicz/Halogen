@@ -8,7 +8,10 @@ bool WhiteBlockade(uint64_t wPawns, uint64_t bPawns);
 
 int EvaluatePositionNet(Position& position)
 {
-    return std::min(4000, std::max(-4000, static_cast<int>(std::round(position.GetEvaluation()))));
+    float netScore = position.GetEvaluation();
+    float adjScore = netScore / (1 + 0.1 * static_cast<float>(position.GetFiftyMoveCount()));
+
+    return std::min(4000, std::max(-4000, static_cast<int>(std::round(adjScore))));
 }
 
 int PieceValues(unsigned int Piece, GameStages GameStage)
