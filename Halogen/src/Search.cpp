@@ -7,6 +7,7 @@ const unsigned int VariableNullDepth = 7;	//Beyond this depth R = 4
 TranspositionTable tTable;
 
 void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRoot, SearchData& locals);
+void QuiesFilterMoves(std::vector<Move>& moves, Position& position);
 void InternalIterativeDeepening(Move& TTmove, unsigned int initialDepth, int depthRemaining, Position& position, int alpha, int beta, int colour, int distanceFromRoot, SearchData& locals, ThreadSharedData& sharedData);
 void SortMovesByScore(std::vector<Move>& moves, std::vector<int>& orderScores);
 void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int score, int alpha, int beta, unsigned int threadCount, const Position& position, const Move& move, const SearchData& locals, const ThreadSharedData& sharedData);
@@ -181,10 +182,62 @@ void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRo
 	SortMovesByScore(moves, orderScores);
 }
 
+void QuiesFilterMoves(std::vector<Move>& moves, Position& position)
+{
+	std::vector<int> orderScores(moves.size(), 0);
+
+	for (size_t i = 0; i < moves.size(); i++)
+	{
+		//Promotions
+		if (moves[i].IsPromotion())
+		{
+			if (moves[i].GetFlag() == QUEEN_PROMOTION || moves[i].GetFlag() == QUEEN_PROMOTION_CAPTURE)
+			{
+				orderScores[i] = 9000000;
+			}
+			else
+			{
+				orderScores.erase(orderScores.begin() + i);
+				moves.erase(moves.begin() + i);
+				i--;
+			}
+
+			continue;
+		}
+
+		//Captures
+		if (moves[i].IsCapture())
+		{
+			int SEE = 0;
+
+			if (moves[i].GetFlag() != EN_PASSANT)
+			{
+				SEE = seeCapture(position, moves[i]);
+			}
+
+			if (SEE >= 0)
+			{
+				orderScores[i] = 8000000 + SEE;
+			}
+
+			if (SEE < 0)
+			{
+				orderScores.erase(orderScores.begin() + i);
+				moves.erase(moves.begin() + i);
+				i--;
+			}
+
+			continue;
+		}
+	}
+
+	SortMovesByScore(moves, orderScores);
+}
+
 void SortMovesByScore(std::vector<Move>& moves, std::vector<int>& orderScores)
 {
 	//selection sort
-	for (size_t i = 0; i < moves.size() - 1; i++)
+	for (int i = 0; i < static_cast<int>(moves.size()) - 1; i++)
 	{
 		size_t max = i;
 
@@ -880,7 +933,7 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 	if (moves.size() == 0)
 		return staticScore;
 		
-	OrderMoves(moves, position, distanceFromRoot, locals);
+	QuiesFilterMoves(moves, position);
 
 	for (size_t i = 0; i < moves.size(); i++)
 	{
@@ -898,13 +951,7 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 		if (staticScore + SEE + 200 < alpha) 								//delta pruning
 			break;
 
-		if (SEE < 0)														//prune bad captures
-			break;
-
-		if (SEE <= 0 && position.GetCaptureSquare() != moves[i].GetTo())	//prune equal captures that aren't recaptures
-			continue;
-
-		if (moves[i].IsPromotion() && !(moves[i].GetFlag() == QUEEN_PROMOTION || moves[i].GetFlag() == QUEEN_PROMOTION_CAPTURE))	//prune underpromotions
+		if (SEE == 0 && position.GetCaptureSquare() != moves[i].GetTo())	//prune equal captures that aren't recaptures
 			continue;
 
 		position.ApplyMove(moves.at(i));
