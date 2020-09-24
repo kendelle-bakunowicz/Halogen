@@ -855,19 +855,6 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 
 	std::vector<Move> moves;
 
-	/*Check for checkmate*/
-	if (IsInCheck(position))
-	{
-		LegalMoves(position, moves);
-
-		if (moves.size() == 0)
-		{
-			return TerminalScore(position, distanceFromRoot);
-		}
-
-		moves.clear();
-	}
-
 	int staticScore = colour * EvaluatePositionNet(position);
 	if (staticScore >= beta) return staticScore;
 	if (staticScore > alpha) alpha = staticScore;
