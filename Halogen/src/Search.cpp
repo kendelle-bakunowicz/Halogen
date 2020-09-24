@@ -777,7 +777,7 @@ bool CheckForRep(Position& position)
 	//note Previous keys will not contain the current key, hence rep starts at one
 	for (size_t i = 0; i < position.GetPreviousKeysSize(); i++)
 	{
-		if (position.GetPreviousKey(i) == current)
+		if (position.GetPreviousKey(i) == current) 
 		{
 			totalRep++;
 		}
