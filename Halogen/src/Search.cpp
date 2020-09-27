@@ -7,7 +7,6 @@ const unsigned int VariableNullDepth = 7;	//Beyond this depth R = 4
 TranspositionTable tTable;
 
 void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRoot, SearchData& locals);
-void InternalIterativeDeepening(Move& TTmove, unsigned int initialDepth, int depthRemaining, Position& position, int alpha, int beta, int colour, int distanceFromRoot, SearchData& locals, ThreadSharedData& sharedData);
 void SortMovesByScore(std::vector<Move>& moves, std::vector<int>& orderScores);
 void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int score, int alpha, int beta, unsigned int threadCount, const Position& position, const Move& move, const SearchData& locals, const ThreadSharedData& sharedData);
 void PrintBestMove(Move Best);
@@ -136,21 +135,19 @@ void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRo
 		//Captures
 		if (moves[i].IsCapture())
 		{
-			int SEE = 0;
-
 			if (moves[i].GetFlag() != EN_PASSANT)
 			{
-				SEE = seeCapture(position, moves[i]);
+				moves[i].SEE = seeCapture(position, moves[i]);
 			}
 
-			if (SEE >= 0)
+			if (moves[i].SEE >= 0)
 			{
-				orderScores[i] = 8000000 + SEE;
+				orderScores[i] = 8000000 + moves[i].SEE;
 			}
 
-			if (SEE < 0)
+			if (moves[i].SEE < 0)
 			{
-				orderScores[i] = 6000000 + SEE;
+				orderScores[i] = 6000000 + moves[i].SEE;
 			}
 
 			continue;
@@ -886,8 +883,8 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 
 	for (size_t i = 0; i < moves.size(); i++)
 	{
-		int SEE = 0;
-		if (moves[i].GetFlag() == CAPTURE) //seeCapture doesn't work for ep or promotions
+		int SEE = moves[i].SEE;
+		if (moves[i].SEE == -1 && moves[i].GetFlag() == CAPTURE) //seeCapture doesn't work for ep or promotions
 		{
 			SEE = seeCapture(position, moves[i]);
 		}

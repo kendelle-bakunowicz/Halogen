@@ -42,6 +42,8 @@ public:
 
 	void Reset();
 
+	signed short SEE;
+
 private:
 
 	void SetFrom(unsigned int from);
@@ -50,6 +52,8 @@ private:
 
 	//6 bits for 'from square', 6 bits for 'to square' and 4 bits for the 'move flag'
 	unsigned short data;
+
+	
 };
 
 

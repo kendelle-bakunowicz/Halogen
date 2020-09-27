@@ -37,11 +37,11 @@ private:
 
 	uint64_t key;			//8 bytes
 
-	Move bestMove;			//2 bytes 
-	char halfmove;			//1 bytes		(is stored as the halfmove at the ROOT of this current search, modulo 16)
+	Move bestMove;			//4 bytes 
 
 	short int score;		//2 bytes
 	char depth;				//1 bytes
 	EntryType cutoff;		//1 bytes
+	char halfmove;			//1 bytes		(is stored as the halfmove at the ROOT of this current search, modulo 16)
 };
 

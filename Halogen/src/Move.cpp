@@ -9,6 +9,7 @@ const unsigned int FLAG_MASK = 0b1111 << 12;	// 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0
 Move::Move()
 {
 	data = 0;
+	SEE = -1;
 }
 
 Move::Move(unsigned int from, unsigned int to, unsigned int flag)
@@ -21,6 +22,7 @@ Move::Move(unsigned int from, unsigned int to, unsigned int flag)
 	SetFrom(from);
 	SetTo(to);
 	SetFlag(flag);
+	SEE = -1;
 }
 
 Move::~Move()
