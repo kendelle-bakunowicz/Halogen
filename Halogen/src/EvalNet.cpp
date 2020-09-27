@@ -1,7 +1,6 @@
 #include "EvalNet.h"
 
-int pieceValueVector[N_STAGES][N_PIECE_TYPES] = { {91, 532, 568, 715, 1279, 5000},
-                                                  {111, 339, 372, 638, 1301, 5000} };
+int pieceValueVector[N_PIECE_TYPES] = {100, 305, 333, 563, 950, 0}; //Values from AlphaZero (https://en.wikipedia.org/wiki/Chess_piece_relative_value)
 
 bool BlackBlockade(uint64_t wPawns, uint64_t bPawns);
 bool WhiteBlockade(uint64_t wPawns, uint64_t bPawns);
@@ -11,9 +10,13 @@ int EvaluatePositionNet(Position& position)
     return std::min(4000, std::max(-4000, static_cast<int>(std::round(position.GetEvaluation()))));
 }
 
-int PieceValues(unsigned int Piece, GameStages GameStage)
+int PieceValues(unsigned int Piece)
 {
-    return pieceValueVector[GameStage][Piece % N_PIECE_TYPES];
+    assert(Piece < N_PIECES);
+    assert(Piece != WHITE_KING);
+    assert(Piece != BLACK_KING);
+
+    return pieceValueVector[Piece % N_PIECE_TYPES];
 }
 
 bool DeadPosition(const Position& position)
