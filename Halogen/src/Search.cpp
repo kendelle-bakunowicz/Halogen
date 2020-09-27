@@ -358,6 +358,8 @@ Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, 
 
 	//tTable.RunAsserts();	//only for testing purposes
 	totalNodes = position.GetNodeCount();
+	KeepSearching = false;
+
 	return move;
 }
 
