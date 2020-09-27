@@ -1,6 +1,12 @@
 #include "Search.h"
 
-const std::vector<int> FutilityMargins = { 100, 150, 250, 400, 600 };
+std::vector<int> FutilityMargins;
+
+const int FutilityConstant = 100;
+const int FutilityLinear = 25;
+const int FutilityQuadratic = 25;
+const int FutilityMaxDepth = 6;
+
 const unsigned int R = 3;					//Null-move reduction depth
 const unsigned int VariableNullDepth = 7;	//Beyond this depth R = 4
 
@@ -84,6 +90,12 @@ void InitSearch()
 {
 	KeepSearching = true;
 	tTable.ResetHitCount();
+
+	FutilityMargins.clear();
+	for (int i = 0; i < FutilityMaxDepth; i++)
+	{
+		FutilityMargins.push_back(FutilityConstant + i * FutilityLinear + i * i * FutilityQuadratic);
+	}
 }
 
 void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRoot, SearchData& locals)
