@@ -302,7 +302,9 @@ Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, 
 {
 	Move move;
 
-	locals.timeManage.StartSearch(allowedTimeMs);
+	if (threadID == 0)
+		sharedData.timeManage.StartSearch(allowedTimeMs);
+
 	position.ResetNodeCount();
 
 	Timer searchTime;
@@ -313,9 +315,10 @@ Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, 
 	int prevScore = 0;
 	bool aspirationReSearch = false;
 
-	for (int depth = 1; (!locals.timeManage.AbortSearch(position.GetNodeCount()) && locals.timeManage.ContinueSearch() && depth <= maxSearchDepth) || depth == 1; )	//depth == 1 is a temporary band-aid to illegal moves under time pressure.
+	//All other threads besides the first will search forver until the first thread decides to stop
+	for (int depth = 1; (!sharedData.timeManage.AbortSearch(position.GetNodeCount()) && sharedData.timeManage.ContinueSearch() && depth <= maxSearchDepth) || depth == 1 || threadID != 0; )	//depth == 1 is a temporary band-aid to illegal moves under time pressure.
 	{
-		if (!aspirationReSearch && sharedData.ShouldSkipDepth(depth))
+		if (!aspirationReSearch && sharedData.ShouldSkipDepth(depth) && threadID != 0)
 		{
 			depth++;
 			continue;
@@ -328,7 +331,7 @@ Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, 
 		SearchResult search = NegaScout(position, depth, depth, alpha, beta, position.GetTurn() ? 1 : -1, 0, false, locals, sharedData);
 		int score = search.GetScore();
 
-		if (depth > 1 && locals.timeManage.AbortSearch(position.GetNodeCount())) { break; }
+		if (depth > 1 && sharedData.timeManage.AbortSearch(position.GetNodeCount())) { break; }
 		if (sharedData.ThreadAbort(depth)) { score = sharedData.GetAspirationScore(); }
 
 		if (score <= alpha)
@@ -358,6 +361,7 @@ Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, 
 
 	//tTable.RunAsserts();	//only for testing purposes
 	totalNodes = position.GetNodeCount();
+	KeepSearching = false;
 	return move;
 }
 
@@ -372,7 +376,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 
 	locals.PvTable[distanceFromRoot].clear();
 
-	if (distanceFromRoot > 0 && locals.timeManage.AbortSearch(position.GetNodeCount())) return -1;		//we must check later that we don't let this score pollute the transposition table
+	if (distanceFromRoot > 0 && sharedData.timeManage.AbortSearch(position.GetNodeCount())) return -1;		//we must check later that we don't let this score pollute the transposition table
 	if (sharedData.ThreadAbort(initialDepth)) return -1;												//another thread has finished searching this depth: ABORT!
 	if (distanceFromRoot >= MAX_DEPTH) return 0;														//If we are 100 moves from root I think we can assume its a drawn position
 
@@ -489,7 +493,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 			AddKiller(hashMove, distanceFromRoot, locals.KillerMoves);
 			AddHistory(hashMove, depthRemaining, locals.HistoryMatrix, position.GetTurn());
 
-			if (!locals.timeManage.AbortSearch(position.GetNodeCount()) && !(sharedData.ThreadAbort(initialDepth)))
+			if (!sharedData.timeManage.AbortSearch(position.GetNodeCount()) && !(sharedData.ThreadAbort(initialDepth)))
 				AddScoreToTable(Score, alpha, position, depthRemaining, distanceFromRoot, beta, bestMove);
 
 			return SearchResult(Score, bestMove);
@@ -568,7 +572,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		b = a + 1;				//Set a new zero width window
 	}
 
-	if (!locals.timeManage.AbortSearch(position.GetNodeCount()) && !sharedData.ThreadAbort(initialDepth))
+	if (!sharedData.timeManage.AbortSearch(position.GetNodeCount()) && !sharedData.ThreadAbort(initialDepth))
 		AddScoreToTable(Score, alpha, position, depthRemaining, distanceFromRoot, beta, bestMove);
 
 	return SearchResult(Score, bestMove);
@@ -851,7 +855,7 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 {
 	locals.PvTable[distanceFromRoot].clear();
 
-	if (locals.timeManage.AbortSearch(position.GetNodeCount())) return -1;
+	if (sharedData.timeManage.AbortSearch(position.GetNodeCount())) return -1;
 	if (sharedData.ThreadAbort(initialDepth)) return -1;									//another thread has finished searching this depth: ABORT!
 	if (distanceFromRoot >= MAX_DEPTH) return 0;								//If we are 100 moves from root I think we can assume its a drawn position
 
@@ -929,7 +933,7 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 			break;
 	}
 
-	if (!locals.timeManage.AbortSearch(position.GetNodeCount()) && !(sharedData.ThreadAbort(initialDepth)))
+	if (!sharedData.timeManage.AbortSearch(position.GetNodeCount()) && !(sharedData.ThreadAbort(initialDepth)))
 		AddScoreToTable(Score, alpha, position, depthRemaining, distanceFromRoot, beta, bestmove);
 
 	return SearchResult(Score, bestmove);

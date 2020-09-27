@@ -48,7 +48,6 @@ struct SearchData
 	std::vector<std::vector<Move>> PvTable;
 	std::vector<Killer> KillerMoves;							//2 moves indexed by distanceFromRoot
 	unsigned int HistoryMatrix[N_PLAYERS][N_SQUARES][N_SQUARES];			//first index is from square and 2nd index is to square
-	SearchTimeManage timeManage;
 };
 
 class ThreadSharedData
@@ -66,6 +65,8 @@ public:
 	void AddTBHit() { tbHits++; }
 	uint64_t getTBHits() const { return tbHits; }
 
+	SearchTimeManage timeManage;
+
 private:
 	std::mutex ioMutex;
 	unsigned int threadCount;
@@ -73,6 +74,7 @@ private:
 	Move currentBestMove;							//Whoever finishes first gets to update this as long as they searched deeper than threadDepth
 	int prevScore;									//if threads abandon the search, we need to know what the score was in order to set new alpha/beta bounds
 	bool noOutput;									//Do not write anything to the concole
+	
 
 	std::atomic<uint64_t> tbHits;
 
