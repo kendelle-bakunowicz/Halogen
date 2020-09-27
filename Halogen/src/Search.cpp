@@ -315,14 +315,7 @@ Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, 
 
 	for (int depth = 1; (!locals.timeManage.AbortSearch(position.GetNodeCount()) && locals.timeManage.ContinueSearch() && depth <= maxSearchDepth) || depth == 1; )	//depth == 1 is a temporary band-aid to illegal moves under time pressure.
 	{
-		if (!aspirationReSearch && sharedData.ShouldSkipDepth(depth))
-		{
-			depth++;
-			continue;
-		}
-
 		sharedData.ReportDepth(depth, threadID);
-
 		position.IncreaseNodeCount();	//make the root node count. Otherwise when re-searching a position and getting an immediant hash hit the nodes searched is zero
 
 		SearchResult search = NegaScout(position, depth, depth, alpha, beta, position.GetTurn() ? 1 : -1, 0, false, locals, sharedData);
