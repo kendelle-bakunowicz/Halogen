@@ -1045,6 +1045,8 @@ void ThreadSharedData::ReportDepth(unsigned int depth, unsigned int threadID)
 
 bool ThreadSharedData::ShouldSkipDepth(unsigned int depth)
 {
+	if (searchDepth.size() == 1) return false;
+
 	std::lock_guard<std::mutex> lg(ioMutex);
 	int count = 0;
 
@@ -1054,7 +1056,7 @@ bool ThreadSharedData::ShouldSkipDepth(unsigned int depth)
 			count++;
 	}
 
-	return (count > static_cast<int>(searchDepth.size()) / 2);
+	return (count >= static_cast<int>(searchDepth.size()) / 2);
 }
 
 int ThreadSharedData::GetAspirationScore()
