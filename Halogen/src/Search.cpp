@@ -333,14 +333,14 @@ Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, 
 
 		if (score <= alpha)
 		{
-			alpha = std::max(int(LowINF), prevScore - abs(prevScore - alpha) * 4);
+			alpha = std::max(int(LowINF), prevScore - abs(prevScore - alpha) * 2);
 			aspirationReSearch = true;
 			continue;
 		}
 
 		if (score >= beta)
 		{
-			beta = std::min(int(HighINF), prevScore + abs(prevScore - beta) * 4);
+			beta = std::min(int(HighINF), prevScore + abs(prevScore - beta) * 2);
 			aspirationReSearch = true;
 			continue;
 		}
