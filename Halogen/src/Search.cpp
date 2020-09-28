@@ -718,23 +718,7 @@ bool UseTransposition(TTEntry& entry, int distanceFromRoot, int alpha, int beta)
 
 bool CheckForRep(Position& position, int distanceFromRoot)
 {
-	int totalRep = 1;
-	uint64_t current = position.GetZobristKey();
-
-	//note Previous keys will not contain the current key, hence rep starts at one
-	for (size_t i = 0; i < position.GetPreviousKeysSize(); i++)
-	{
-		if (position.GetPreviousKey(i) == current)
-		{
-			totalRep++;
-		}
-
-		if (totalRep == 3) return true;																			//3 reps is always a draw
-		if (totalRep == 2 && static_cast<int>(position.GetPreviousKeysSize() - i) < distanceFromRoot - 1) 
-			return true;			//Don't allow 2 reps if its in the local search history (not part of the actual played game)
-	}
-	
-	return false;
+	return position.CheckForRep(distanceFromRoot);
 }
 
 int extension(Position& position, const Move& move, int alpha, int beta)

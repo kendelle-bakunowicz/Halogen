@@ -55,6 +55,12 @@ BoardParamiterData BoardParamiters::GetPreviousParamiters()
 	return PreviousParamiters.back();
 }
 
+unsigned int BoardParamiters::GetPrevFiftyMove(int index)
+{
+	assert(index < PreviousParamiters.size());
+	return PreviousParamiters[index].GetFiftyMoveCount();
+}
+
 bool BoardParamiters::InitialiseParamitersFromFen(std::vector<std::string> fen)
 {
 	InitParamiters();

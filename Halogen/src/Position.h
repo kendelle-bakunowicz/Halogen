@@ -52,6 +52,8 @@ public:
 
 	float GetEvaluation();
 
+	bool CheckForRep(int distanceFromRoot);
+
 private:
 	uint64_t NodeCount;
 	uint64_t key;

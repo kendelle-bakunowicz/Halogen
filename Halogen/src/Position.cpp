@@ -545,3 +545,26 @@ float Position::GetEvaluation()
 	//	std::cout << "ERROR!";
 	return net.QuickEval();
 }
+
+bool Position::CheckForRep(int distanceFromRoot)
+{
+	int totalRep = 1;
+	uint64_t current = GetZobristKey();
+
+	//note Previous keys will not contain the current key, hence rep starts at one
+	for (int i = static_cast<int>(GetPreviousKeysSize()) - 1; i >= 0; i--)
+	{
+		if (GetPreviousKey(i) == current)
+		{
+			totalRep++;
+		}
+
+		//if (i > 0 && GetPrevFiftyMove(i - 1) > GetPrevFiftyMove(i)) break;
+
+		if (totalRep == 3) return true;																			//3 reps is always a draw
+		if (totalRep == 2 && static_cast<int>(GetPreviousKeysSize() - i) < distanceFromRoot - 1)
+			return true;			//Don't allow 2 reps if its in the local search history (not part of the actual played game)
+	}
+
+	return false;
+}

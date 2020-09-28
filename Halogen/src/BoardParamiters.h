@@ -58,6 +58,7 @@ protected:
 
 	void InitParamiters();
 	BoardParamiterData GetPreviousParamiters();
+	unsigned int GetPrevFiftyMove(int index);
 
 private:
 	std::vector<BoardParamiterData> PreviousParamiters;
