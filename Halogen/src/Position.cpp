@@ -559,10 +559,10 @@ bool Position::CheckForRep(int distanceFromRoot)
 			totalRep++;
 		}
 
-		//if (i > 0 && GetPrevFiftyMove(i - 1) > GetPrevFiftyMove(i)) break;
+		if (i > 0 && GetPrevFiftyMove(i - 1) > GetPrevFiftyMove(i)) break;
 
 		if (totalRep == 3) return true;																			//3 reps is always a draw
-		if (totalRep == 2 && static_cast<int>(GetPreviousKeysSize() - i) < distanceFromRoot - 1)
+		if (totalRep == 2 && static_cast<int>(GetPreviousKeysSize()) - i < distanceFromRoot - 1)
 			return true;			//Don't allow 2 reps if its in the local search history (not part of the actual played game)
 	}
 
