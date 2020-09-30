@@ -46,8 +46,8 @@ struct SearchData
 	SearchData();
 
 	std::vector<std::vector<Move>> PvTable;
-	std::vector<Killer> KillerMoves;							//2 moves indexed by distanceFromRoot
-	unsigned int HistoryMatrix[N_PLAYERS][N_SQUARES][N_SQUARES];			//first index is from square and 2nd index is to square
+	std::vector<Killer> KillerMoves;									//2 moves indexed by distanceFromRoot
+	unsigned int HistoryMatrix[N_PIECES][N_SQUARES][N_SQUARES];			//first index is from square and 2nd index is to square
 	SearchTimeManage timeManage;
 };
 
