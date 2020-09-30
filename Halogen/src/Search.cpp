@@ -279,7 +279,7 @@ void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int scor
 		<< " hashfull " << tTable.GetCapacity(position.GetTurnCount())						//thousondths full
 		<< " tbhits " << sharedData.getTBHits();
 
-#if defined(_MSC_VER) && !defined(NDEBUG)  
+#if defined(_MSC_VER)// && !defined(NDEBUG)  
 	std::cout	//these lines are for debug and not part of official uci protocol
 		<< " string thread " << std::this_thread::get_id()
 		<< " hashHitRate " << tTable.GetHitCount() * 1000 / std::max(sharedData.getNodes(), uint64_t(1))
@@ -430,8 +430,10 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		return Quiescence(position, initialDepth, alpha, beta, colour, distanceFromRoot, depthRemaining, locals, sharedData);
 	}
 
+	int staticScore = colour * EvaluatePositionNet(position, locals.evalTable);
+
 	/*Null move pruning*/
-	if (AllowedNull(allowedNull, position, beta, alpha, depthRemaining) && ((colour * EvaluatePositionNet(position, locals.evalTable)) > beta))
+	if (AllowedNull(allowedNull, position, beta, alpha, depthRemaining) && (staticScore > beta))
 	{
 		unsigned int reduction = R + (depthRemaining >= static_cast<int>(VariableNullDepth));
 
@@ -454,6 +456,15 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	beta = std::min<int>(mateIn(distanceFromRoot), beta);
 	if (alpha >= beta)
 		return alpha;
+
+	if (depthRemaining == 1 && !IsInCheck(position) && staticScore + 300 < alpha)
+		return staticScore + 300;
+
+	if (depthRemaining == 2 && !IsInCheck(position) && staticScore + 500 < alpha)
+		return staticScore + 500;
+
+	if (depthRemaining == 3 && !IsInCheck(position) && staticScore + 700 < alpha)
+		return staticScore + 700;
 
 	Move bestMove = Move();	//used for adding to transposition table later
 	int Score = LowINF;
@@ -509,7 +520,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	
 	OrderMoves(moves, position, distanceFromRoot, locals);
 	bool InCheck = IsInCheck(position);
-	int staticScore = colour * EvaluatePositionNet(position, locals.evalTable);
 
 	if (hashMove.IsUninitialized() && depthRemaining > 3)
 		depthRemaining--;
