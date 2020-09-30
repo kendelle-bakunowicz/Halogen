@@ -457,14 +457,11 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	if (alpha >= beta)
 		return alpha;
 
-	if (depthRemaining == 1 && !IsInCheck(position) && staticScore + 300 < alpha)
-		return staticScore + 300;
-
-	if (depthRemaining == 2 && !IsInCheck(position) && staticScore + 500 < alpha)
+	if (depthRemaining == 1 && !IsInCheck(position) && staticScore + 500 < alpha)
 		return staticScore + 500;
 
-	if (depthRemaining == 3 && !IsInCheck(position) && staticScore + 700 < alpha)
-		return staticScore + 700;
+	if (depthRemaining == 2 && !IsInCheck(position) && staticScore + 900 < alpha)
+		return staticScore + 900;
 
 	Move bestMove = Move();	//used for adding to transposition table later
 	int Score = LowINF;
