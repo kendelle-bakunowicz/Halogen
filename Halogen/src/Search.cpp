@@ -430,8 +430,10 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		return Quiescence(position, initialDepth, alpha, beta, colour, distanceFromRoot, depthRemaining, locals, sharedData);
 	}
 
+	int staticScore = colour * EvaluatePositionNet(position, locals.evalTable);
+
 	/*Null move pruning*/
-	if (AllowedNull(allowedNull, position, beta, alpha, depthRemaining) && ((colour * EvaluatePositionNet(position, locals.evalTable)) > beta))
+	if (AllowedNull(allowedNull, position, beta, alpha, depthRemaining) && staticScore > beta)
 	{
 		unsigned int reduction = R + (depthRemaining >= static_cast<int>(VariableNullDepth));
 
@@ -454,6 +456,9 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	beta = std::min<int>(mateIn(distanceFromRoot), beta);
 	if (alpha >= beta)
 		return alpha;
+
+	if ((!IsPV(beta, alpha)) && (distanceFromRoot == 1) && (staticScore - 300 > beta) && (!IsInCheck(position)))
+		return staticScore - 300;
 
 	Move bestMove = Move();	//used for adding to transposition table later
 	int Score = LowINF;
@@ -509,7 +514,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	
 	OrderMoves(moves, position, distanceFromRoot, locals);
 	bool InCheck = IsInCheck(position);
-	int staticScore = colour * EvaluatePositionNet(position, locals.evalTable);
 
 	if (hashMove.IsUninitialized() && depthRemaining > 3)
 		depthRemaining--;
