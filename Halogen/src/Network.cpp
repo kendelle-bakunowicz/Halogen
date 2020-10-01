@@ -1,7 +1,7 @@
 #include "Network.h"
 
 static const char* WeightsTXT[] = {
-    #include "ancient_course.network" 
+    #include "741_64_8_1-50.network" 
     ""
 };
 
@@ -193,7 +193,7 @@ void Network::ApplyInverseDelta()
 
 float Network::QuickEval()
 {
-    std::vector<float>& inputs = hiddenLayers.at(0).zeta;
+    std::vector<float> inputs = hiddenLayers.at(0).zeta;
 
     for (size_t i = 1; i < hiddenLayers.size(); i++)    //skip first layer
     {
