@@ -432,6 +432,10 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 
 	int staticScore = colour * EvaluatePositionNet(position, locals.evalTable);
 
+	/*Static null pruning*/
+	if ((!IsPV(beta, alpha)) && (distanceFromRoot == 1) && (staticScore - 300 > beta) && (!IsInCheck(position)))
+		return staticScore - 300;
+
 	/*Null move pruning*/
 	if (AllowedNull(allowedNull, position, beta, alpha, depthRemaining) && staticScore > beta)
 	{
@@ -456,9 +460,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	beta = std::min<int>(mateIn(distanceFromRoot), beta);
 	if (alpha >= beta)
 		return alpha;
-
-	if ((!IsPV(beta, alpha)) && (distanceFromRoot == 1) && (staticScore - 300 > beta) && (!IsInCheck(position)))
-		return staticScore - 300;
 
 	Move bestMove = Move();	//used for adding to transposition table later
 	int Score = LowINF;
