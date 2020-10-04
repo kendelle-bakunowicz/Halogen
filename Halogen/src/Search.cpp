@@ -207,6 +207,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	position.GetKing(WHITE);	//this has internal asserts
 	position.GetKing(BLACK);
 	assert((colour == 1 && position.GetTurn() == WHITE) || (colour == -1 && position.GetTurn() == BLACK));
+	assert(!IsInCheck(position, !position.GetTurn()));
 #endif 
 
 	locals.PvTable[distanceFromRoot].clear();
@@ -311,6 +312,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	for (size_t i = 0; gen.GetNext(move, position, distanceFromRoot, locals.KillerMoves, locals.HistoryMatrix); i++)
 	{
 		position.ApplyMove(move);
+
 		sharedData.AddNode();
 		tTable.PreFetch(position.GetZobristKey());							//load the transposition into l1 cache. ~5% speedup
 

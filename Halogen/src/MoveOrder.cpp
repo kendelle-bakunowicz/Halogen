@@ -65,7 +65,7 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 	case Stage::KILLER_2:
 		Killer2 = KillerMoves.at(distanceFromRoot).move[0];
 
-		/*If Killer2 is a legal move*/
+		if (MoveIsLegal(position, Killer2))
 		{
 			move = Killer2;
 			state = Stage::BAD_CAPTURES;
@@ -78,6 +78,7 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 		if (LoudIndex < static_cast<int>(loudMoves.size()))
 		{
 			move = loudMoves[LoudIndex++];
+			MoveIsLegal(position, move);
 			return true;
 		}
 
@@ -96,6 +97,7 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 		if (QuietIndex < static_cast<int>(quietMoves.size()))
 		{
 			move = quietMoves[QuietIndex++];
+			MoveIsLegal(position, move);
 			return true;
 		}
 	}
