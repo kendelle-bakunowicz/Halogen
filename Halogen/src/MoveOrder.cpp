@@ -31,7 +31,7 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 
 	case Stage::CAPTURES:
 		
-		if (currentIndex == -1) 
+		if (currentIndex == static_cast<size_t>(-1)) 
 		{
 			QuiescenceMoves(position, loudMoves);
 			OrderMoves(loudMoves, position, distanceFromRoot, KillerMoves, HistoryMatrix, TTmove);
@@ -47,12 +47,12 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 		else 
 		{
 			state = Stage::QUIET_MOVES;
-			currentIndex = -1;
+			currentIndex = static_cast<size_t>(-1);
 		}
 		//Fall through
 
 	case Stage::QUIET_MOVES:
-		if (currentIndex == -1 && !Quiescent) 
+		if (currentIndex == static_cast<size_t>(-1) && !Quiescent)
 		{
 			QuietMoves(position, quietMoves);
 			OrderMoves(quietMoves, position, distanceFromRoot, KillerMoves, HistoryMatrix, TTmove);

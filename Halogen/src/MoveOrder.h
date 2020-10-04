@@ -42,7 +42,7 @@ private:
 	std::vector<Move> loudMoves;
 	std::vector<Move> quietMoves;
 	Move TTmove;
-	int currentIndex;
+	size_t currentIndex;
 }; 
 
 struct Killer;

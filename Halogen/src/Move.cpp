@@ -19,6 +19,7 @@ Move::Move(unsigned int from, unsigned int to, unsigned int flag)
 	assert(flag < 16);
 
 	data = 0;
+	orderScore = 0;
 	SetFrom(from);
 	SetTo(to);
 	SetFlag(flag);
