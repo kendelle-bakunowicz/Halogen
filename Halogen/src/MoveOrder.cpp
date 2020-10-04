@@ -89,36 +89,30 @@ void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRo
 	Previously this function would order all the moves at once. Now it only orderes the section we are generating (for example just the loud moves).
 	*/
 
-	std::vector<int> orderScores(moves.size(), 0);
-
 	for (size_t i = 0; i < moves.size(); i++)
 	{
 		//Hash move
 		if (moves[i] == TTmove)
 		{
-			orderScores.erase(orderScores.begin() + i);
 			moves.erase(moves.begin() + i);
 			i--;
-			continue;
 		}
 
 		//Promotions
-		if (moves[i].IsPromotion())
+		else if (moves[i].IsPromotion())
 		{
 			if (moves[i].GetFlag() == QUEEN_PROMOTION || moves[i].GetFlag() == QUEEN_PROMOTION_CAPTURE)
 			{
-				orderScores[i] = 9000000;
+				moves[i].orderScore = static_cast<int>(MoveScore::PROMOTION);
 			}
 			else
 			{
-				orderScores[i] = -1;
+				moves[i].orderScore = static_cast<int>(MoveScore::UNDERPROMOTION);
 			}
-
-			continue;
 		}
 
 		//Captures
-		if (moves[i].IsCapture())
+		else if (moves[i].IsCapture())
 		{
 			int SEE = 0;
 
@@ -129,40 +123,42 @@ void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRo
 
 			if (SEE >= 0)
 			{
-				orderScores[i] = 8000000 + SEE;
+				moves[i].orderScore = static_cast<int>(MoveScore::GOOD_CAPTURE) + SEE;
 			}
 
 			if (SEE < 0)
 			{
-				orderScores[i] = 6000000 + SEE;
+				moves[i].orderScore = static_cast<int>(MoveScore::BAD_CAPTURE) + SEE;
 			}
-
-			continue;
 		}
 
 		//Killers
-		if (moves[i] == KillerMoves.at(distanceFromRoot).move[0])
+		else if (moves[i] == KillerMoves.at(distanceFromRoot).move[0])
 		{
-			orderScores[i] = 7500000;
-			continue;
+			moves[i].orderScore = static_cast<int>(MoveScore::KILLER_1);
 		}
 
-		if (moves[i] == KillerMoves.at(distanceFromRoot).move[1])
+		else if (moves[i] == KillerMoves.at(distanceFromRoot).move[1])
 		{
-			orderScores[i] = 6500000;
-			continue;
+			moves[i].orderScore = static_cast<int>(MoveScore::KILLER_2);
 		}
 
-		//Quiet
-		orderScores[i] = HistoryMatrix[position.GetTurn()][moves[i].GetFrom()][moves[i].GetTo()];
-
-		if (orderScores[i] > 1000000)
+		else 
 		{
-			orderScores[i] = 1000000;
+			//Quiet
+			moves[i].orderScore = HistoryMatrix[position.GetTurn()][moves[i].GetFrom()][moves[i].GetTo()];
+
+			if (moves[i].orderScore > static_cast<int>(MoveScore::QUIET_MAXIMUM))
+			{
+				moves[i].orderScore = static_cast<int>(MoveScore::QUIET_MAXIMUM);
+			}
 		}
 	}
 
-	SortMovesByScore(moves, orderScores);
+	std::sort(moves.begin(), moves.end(), [](const Move& lhs, const Move& rhs)
+		{
+			return lhs.orderScore > rhs.orderScore;
+		});
 }
 
 void SortMovesByScore(std::vector<Move>& moves, std::vector<int>& orderScores)
