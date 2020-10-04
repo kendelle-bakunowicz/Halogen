@@ -8,7 +8,8 @@ enum class Stage
 {
 	TT_MOVE,
 	CAPTURES,
-	QUIET_MOVES
+	QUIET_MOVES,
+	NO_MOVE
 };
 
 struct Killer
@@ -22,7 +23,7 @@ public:
 	MoveGenerator();
 	~MoveGenerator();
 
-	bool GetNext(Move& move, Position& position, int distanceFromRoot, const std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES]);
+	Stage GetNext(Stage finalStage, Move& move, Position& position, int distanceFromRoot, const std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES]);
 
 private:
 	Stage state;

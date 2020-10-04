@@ -308,7 +308,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	MoveGenerator gen;
 	Move move;
 
-	for (size_t i = 0; gen.GetNext(move, position, distanceFromRoot, locals.KillerMoves, locals.HistoryMatrix); i++)
+	for (size_t i = 0; gen.GetNext(Stage::QUIET_MOVES, move, position, distanceFromRoot, locals.KillerMoves, locals.HistoryMatrix) != Stage::NO_MOVE; i++)
 	{
 		position.ApplyMove(move);
 		sharedData.AddNode();
@@ -668,7 +668,7 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 	Move move;
 	size_t i = 0;
 
-	while (gen.GetNext(move, position, distanceFromRoot, locals.KillerMoves, locals.HistoryMatrix))
+	while (gen.GetNext(Stage::CAPTURES, move, position, distanceFromRoot, locals.KillerMoves, locals.HistoryMatrix) != Stage::NO_MOVE)
 	{
 		int SEE = 0;
 		if (move.GetFlag() == CAPTURE) //seeCapture doesn't work for ep or promotions

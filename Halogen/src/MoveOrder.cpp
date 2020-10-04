@@ -13,7 +13,7 @@ MoveGenerator::~MoveGenerator()
 {
 }
 
-bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot, const std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES])
+Stage MoveGenerator::GetNext(Stage finalStage, Move& move, Position& position, int distanceFromRoot, const std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES])
 {
 	std::vector<Move> moves;
 
@@ -25,12 +25,15 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 		{	
 			state = Stage::CAPTURES;
 			TTmove = move;
-			return true;
+			return Stage::TT_MOVE;
 		}
 		//Fall through
 
 	case Stage::CAPTURES:
 		
+		if (finalStage == Stage::TT_MOVE)
+			break;
+
 		if (currentIndex == -1) 
 		{
 			QuiescenceMoves(position, loudMoves);
@@ -38,11 +41,11 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 			currentIndex++;
 		}
 
-		if (currentIndex < loudMoves.size())
+		if (currentIndex < loudMoves.size()) 
 		{
 			move = loudMoves[currentIndex];
 			currentIndex++;
-			return true;
+			return Stage::CAPTURES;
 		}
 		else 
 		{
@@ -52,6 +55,10 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 		//Fall through
 
 	case Stage::QUIET_MOVES:
+
+		if (finalStage == Stage::CAPTURES)
+			break;
+
 		if (currentIndex == -1) 
 		{
 			QuietMoves(position, quietMoves);
@@ -63,11 +70,11 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 		{
 			move = quietMoves[currentIndex];
 			currentIndex++;
-			return true;
+			return Stage::QUIET_MOVES;
 		}
 	}
 
-	return false;
+	return Stage::NO_MOVE;
 }
 
 Move GetHashMove(const Position& position, int distanceFromRoot)
