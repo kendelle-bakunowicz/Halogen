@@ -691,7 +691,6 @@ bool MoveIsLegal(Position& position, Move& move)
 
 	unsigned int Piece = position.GetSquare(move.GetFrom());
 	
-
 	/*Make sure there's a piece to be moved*/
 	if (position.GetSquare(move.GetFrom()) == N_PIECES)
 		return false;
@@ -703,6 +702,16 @@ bool MoveIsLegal(Position& position, Move& move)
 	/*Make sure we aren't capturing our own piece*/
 	if (position.GetSquare(move.GetTo()) != N_PIECES && ColourOfPiece(position.GetSquare(move.GetTo())) == position.GetTurn())
 		return false;
+
+	/*If capture, make sure there's something there to capture*/
+	if (move.IsCapture() && move.GetFlag() != EN_PASSANT)
+		if (position.GetSquare(move.GetTo()) == N_PIECES)
+			return false;
+
+	/*If promotion, make sure there's a pawn we are moving*/
+	if (move.IsPromotion())
+		if (position.GetSquare(move.GetFrom()) != WHITE_PAWN && position.GetSquare(move.GetFrom()) != BLACK_PAWN)
+			return false;
 
 	uint64_t allPieces = position.GetAllPieces();
 

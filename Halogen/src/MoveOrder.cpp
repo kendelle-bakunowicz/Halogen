@@ -22,11 +22,10 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 	{
 	case Stage::TT_MOVE:
 		move = GetHashMove(position, distanceFromRoot); 
-		if (!move.IsUninitialized())
+		if (!move.IsUninitialized() && MoveIsLegal(position, move))
 		{	
 			state = Stage::GOOD_CAPTURES;
 			TTmove = move;
-			MoveIsLegal(position, move);
 			return true;
 		}
 
@@ -45,7 +44,6 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 			if (loudMoves[LoudIndex].orderScore >= static_cast<int>(MoveScore::GOOD_CAPTURE))
 			{
 				move = loudMoves[LoudIndex++];
-				MoveIsLegal(position, move);
 				return true;
 			}
 		}
@@ -78,7 +76,6 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 		if (LoudIndex < static_cast<int>(loudMoves.size()))
 		{
 			move = loudMoves[LoudIndex++];
-			MoveIsLegal(position, move);
 			return true;
 		}
 
@@ -97,7 +94,6 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 		if (QuietIndex < static_cast<int>(quietMoves.size()))
 		{
 			move = quietMoves[QuietIndex++];
-			MoveIsLegal(position, move);
 			return true;
 		}
 	}
