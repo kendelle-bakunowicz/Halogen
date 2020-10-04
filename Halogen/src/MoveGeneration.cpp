@@ -683,6 +683,63 @@ Move GetSmallestAttackerMove(const Position& position, unsigned int square, bool
 	return Move();
 }
 
+bool MoveIsLegal(Position& position, Move& move)
+{
+	/*Obvious check first*/
+	if (move.IsUninitialized())
+		return false;
+
+	unsigned int Piece = position.GetSquare(move.GetFrom());
+	
+
+	/*Make sure there's a piece to be moved*/
+	if (ColourOfPiece(Piece) != position.GetTurn())
+		return false;
+
+	/*Make sure we aren't capturing our own piece*/
+	if (ColourOfPiece(position.GetSquare(move.GetTo())) == position.GetTurn())
+		return false;
+
+	uint64_t allPieces = position.GetAllPieces();
+
+	/*Sliding pieces*/
+	if (Piece == WHITE_BISHOP || Piece == BLACK_BISHOP || Piece == WHITE_ROOK || Piece == BLACK_ROOK || Piece == WHITE_QUEEN || Piece == BLACK_QUEEN)
+	{
+		if (!mayMove(move.GetFrom(), move.GetTo(), allPieces))
+			return false;
+	}
+
+	if (Piece == WHITE_PAWN) 
+	{
+		if ((SquareBB[move.GetTo()] & WhitePawnAttacks[move.GetFrom()]) == 0)
+			return false;
+	}
+
+	if (Piece == BLACK_PAWN)
+	{
+		if ((SquareBB[move.GetTo()] & BlackPawnAttacks[move.GetFrom()]) == 0)
+			return false;
+	}
+
+	if (Piece == WHITE_KNIGHT || Piece == BLACK_KNIGHT)
+	{
+		if ((SquareBB[move.GetTo()] & KnightAttacks[move.GetFrom()]) == 0)
+			return false;
+	}
+
+	if (Piece == WHITE_KING || Piece == BLACK_KING)
+	{
+		if ((SquareBB[move.GetTo()] & KingAttacks[move.GetFrom()]) == 0)
+			return false;
+	}
+
+	/*Move puts me in check*/
+	if (MovePutsSelfInCheck(position, move))
+		return false;
+
+	return true;
+}
+
 bool MovePutsSelfInCheck(Position& position, const Move & move)
 {
 	unsigned int fromPiece = position.GetSquare(move.GetFrom());

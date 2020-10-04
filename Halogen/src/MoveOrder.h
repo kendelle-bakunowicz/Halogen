@@ -7,7 +7,10 @@
 enum class Stage
 {
 	TT_MOVE,
-	CAPTURES,
+	GOOD_CAPTURES,	//+ promotions
+	KILLER_1,
+	KILLER_2,
+	BAD_CAPTURES,
 	QUIET_MOVES
 };
 
@@ -42,7 +45,10 @@ private:
 	std::vector<Move> loudMoves;
 	std::vector<Move> quietMoves;
 	Move TTmove;
-	int currentIndex;
+	Move Killer1;
+	Move Killer2;
+	int LoudIndex;
+	int QuietIndex;
 }; 
 
 struct Killer;

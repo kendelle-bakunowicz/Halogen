@@ -13,5 +13,7 @@ uint64_t GetThreats(const Position& position, unsigned int square, bool colour);
 
 Move GetSmallestAttackerMove(const Position& position, unsigned int square, bool colour);
 
+bool MoveIsLegal(Position& position, Move& move);
+
 
 
