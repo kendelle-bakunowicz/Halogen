@@ -668,7 +668,7 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 	Move move;
 	size_t i = 0;
 
-	while (gen.GetNext(move, position, distanceFromRoot, locals.KillerMoves, locals.HistoryMatrix))
+	while (gen.GetNext(move, position, distanceFromRoot, locals.KillerMoves, locals.HistoryMatrix, true))
 	{
 		int SEE = 0;
 		

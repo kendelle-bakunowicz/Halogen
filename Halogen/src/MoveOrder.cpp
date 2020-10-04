@@ -13,7 +13,7 @@ MoveGenerator::~MoveGenerator()
 {
 }
 
-bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot, const std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES])
+bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot, const std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES], bool Quiescent)
 {
 	std::vector<Move> moves;
 
@@ -52,7 +52,7 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 		//Fall through
 
 	case Stage::QUIET_MOVES:
-		if (currentIndex == -1) 
+		if (currentIndex == -1 && !Quiescent) 
 		{
 			QuietMoves(position, quietMoves);
 			OrderMoves(quietMoves, position, distanceFromRoot, KillerMoves, HistoryMatrix, TTmove);

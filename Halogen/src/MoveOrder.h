@@ -34,7 +34,7 @@ public:
 	MoveGenerator();
 	~MoveGenerator();
 
-	bool GetNext(Move& move, Position& position, int distanceFromRoot, const std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES]);
+	bool GetNext(Move& move, Position& position, int distanceFromRoot, const std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES], bool Quiescent = false);
 
 private:
 	Stage state;
