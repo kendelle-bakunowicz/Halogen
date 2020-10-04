@@ -158,7 +158,7 @@ void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRo
 		}
 	}
 
-	std::sort(moves.begin(), moves.end(), [](const Move& lhs, const Move& rhs)
+	std::stable_sort(moves.begin(), moves.end(), [](const Move& lhs, const Move& rhs)
 		{
 			return lhs.orderScore > rhs.orderScore;
 		});
