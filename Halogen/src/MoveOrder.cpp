@@ -63,7 +63,7 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 
 		//Fall through
 	case Stage::KILLER_2:
-		Killer2 = KillerMoves.at(distanceFromRoot).move[0];
+		Killer2 = KillerMoves.at(distanceFromRoot).move[0]; 
 
 		if (MoveIsLegal(position, Killer2))
 		{
