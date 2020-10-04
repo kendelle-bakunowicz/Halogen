@@ -1,8 +1,8 @@
 #include "EvalCache.h"
 
-EvalCacheTable::EvalCacheTable()
+EvalCacheTable::EvalCacheTable() : table(new std::array<EvalCacheEntry, 65536>)
 {
-	table = new std::array<EvalCacheEntry, 65536>;
+
 }
 
 EvalCacheTable::~EvalCacheTable()
@@ -18,6 +18,8 @@ void EvalCacheTable::AddEntry(uint64_t key, int eval)
 
 bool EvalCacheTable::GetEntry(uint64_t key, int& eval)
 {
+	return false;
+
 	if ((*table)[key % table->size()].key != key)
 	{
 		misses++;
