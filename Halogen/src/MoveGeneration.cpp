@@ -790,7 +790,7 @@ bool MoveIsLegal(Position& position, Move& move)
 			return false;
 	}
 
-	if (Piece == WHITE_KING || Piece == BLACK_KING)
+	if ((Piece == WHITE_KING || Piece == BLACK_KING) && !(move.GetFlag() == KING_CASTLE || move.GetFlag() == QUEEN_CASTLE))
 	{
 		if ((SquareBB[move.GetTo()] & KingAttacks[move.GetFrom()]) == 0)
 			return false;

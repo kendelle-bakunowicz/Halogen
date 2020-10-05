@@ -21,10 +21,11 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 	switch (state)
 	{
 	case Stage::TT_MOVE:
+
+		state = Stage::GOOD_CAPTURES;
 		move = GetHashMove(position, distanceFromRoot); 
 		if (!move.IsUninitialized() && MoveIsLegal(position, move))
 		{	
-			state = Stage::GOOD_CAPTURES;
 			TTmove = move;
 			return true;
 		}
@@ -50,6 +51,9 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 
 		//Fall through
 	case Stage::KILLER_1:
+		if (Quiescent)
+			break;
+
 		Killer1 = KillerMoves.at(distanceFromRoot).move[0];
 
 		if (MoveIsLegal(position, Killer1))
@@ -81,9 +85,7 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 
 		//Fall through
 	case Stage::QUIET_MOVES:
-		if (Quiescent)
-			break;
-
+		
 		if (QuietIndex == -1)
 		{
 			QuietMoves(position, quietMoves);
