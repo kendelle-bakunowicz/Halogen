@@ -47,19 +47,31 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 				move = loudMoves[LoudIndex++];
 				return true;
 			}
+			else
+			{
+				state = Stage::BAD_CAPTURES;
+			}
+		}
+
+		//Fall through
+	case Stage::BAD_CAPTURES:
+		if (Quiescent)
+			break;
+
+		if (LoudIndex < static_cast<int>(loudMoves.size()))
+		{
+			move = loudMoves[LoudIndex++];
+			return true;
 		}
 
 		//Fall through
 	case Stage::KILLER_1:
-		if (Quiescent)
-			break;
-
 		Killer1 = KillerMoves.at(distanceFromRoot).move[0];
 
+		state = Stage::KILLER_2;
 		if (MoveIsLegal(position, Killer1))
 		{
 			move = Killer1;
-			state = Stage::KILLER_2;
 			return true;
 		}
 
@@ -67,19 +79,10 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 	case Stage::KILLER_2:
 		Killer2 = KillerMoves.at(distanceFromRoot).move[0]; 
 
+		state = Stage::QUIET_MOVES;
 		if (MoveIsLegal(position, Killer2))
 		{
 			move = Killer2;
-			state = Stage::BAD_CAPTURES;
-			return true;
-		}
-
-		//Fall through
-	case Stage::BAD_CAPTURES:
-		
-		if (LoudIndex < static_cast<int>(loudMoves.size()))
-		{
-			move = loudMoves[LoudIndex++];
 			return true;
 		}
 
@@ -134,12 +137,18 @@ void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRo
 		//Killers
 		else if (moves[i] == Killer1)
 		{
+			if (!MoveIsLegal(position, Killer1))
+				std::cout << "ERROR!";
+
 			moves.erase(moves.begin() + i);
 			i--;
 		}
 
 		else if (moves[i] == Killer2)
 		{
+			if (!MoveIsLegal(position, Killer1))
+				std::cout << "ERROR!";
+
 			moves.erase(moves.begin() + i);
 			i--;
 		}
