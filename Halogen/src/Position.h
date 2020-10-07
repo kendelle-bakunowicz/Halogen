@@ -48,7 +48,7 @@ public:
 	Network net;
 
 	float GetEvaluation();
-	std::vector<deltaPoint> CalculateMoveDelta(Move move);				//A vector which calculates the CHANGE in each input paramiter
+	std::vector<deltaPoint>& CalculateMoveDelta(Move move);				//A vector which calculates the CHANGE in each input paramiter
 	std::vector<float> GetInputLayer() const;
 
 	void RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng);
@@ -60,11 +60,10 @@ private:
 	uint64_t GenerateZobristKey() const;
 	uint64_t IncrementZobristKey(Move move);	
 
-	
-	
-
-	static size_t modifier(size_t index);						//no inputs for pawns on front or back rank for neural net: we need to modify zobrist-like indexes
+	static size_t modifier(size_t index);								//no inputs for pawns on front or back rank for neural net: we need to modify zobrist-like indexes
 
 	size_t EvaluatedPositions = 0;
+
+	std::vector<deltaPoint> delta;										//re recycle this object to save time in CalculateMoveDelta
 };
 
