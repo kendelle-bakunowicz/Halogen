@@ -411,10 +411,9 @@ void Bench()
 int ProcessDataForPyTorch()
 {
 	char line[256];
-	FILE* fin = fopen("C:\\Users\\kiere\\Downloads\\Ethereal3\\Ethereal3.fens", "r");
+	FILE* fin = fopen("D:\\Python\\NeuralFiltered.book", "r");
 
 	Position position;
-	SearchData data;
 
 	for (;;) {
 
@@ -422,12 +421,6 @@ int ProcessDataForPyTorch()
 			return 1;
 
 		position.InitialiseFromFen(line);
-
-		if (PositionHasWinningCapture(position))
-			continue;
-
-		if (EvaluatePosition(position) != TexelSearch(position, data))
-			continue;
 
 		if (IsInCheck(position))
 			continue;
@@ -443,16 +436,10 @@ int ProcessDataForPyTorch()
 			}
 		}
 
-		printf("%d ", (position.GetTurn()));
-		printf("%d ", (position.CanCastleWhiteKingside()));
-		printf("%d ", (position.CanCastleWhiteQueenside()));
-		printf("%d ", (position.CanCastleBlackKingside()));
-		printf("%d ", (position.CanCastleBlackQueenside()));
-
 		// Find the result { W, L, D } => { 1.0, 0.0, 0.5 }
-		if (strstr(line, "1-0")) printf("1.0");
-		else if (strstr(line, "0-1")) printf("0.0");
-		else if (strstr(line, "1/2-1/2")) printf("0.5");
+		if (strstr(line, "[1.0]")) printf("1.0");
+		else if (strstr(line, "[0.0]")) printf("0.0");
+		else if (strstr(line, "[0.5]")) printf("0.5");
 
 		printf(" 0\n");
 	}
