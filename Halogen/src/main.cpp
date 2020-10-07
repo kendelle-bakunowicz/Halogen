@@ -419,7 +419,7 @@ void RL()
 	srand(time(NULL));
 
 	std::default_random_engine generator;
-	std::normal_distribution<double> distribution(0, 0.05);
+	std::normal_distribution<double> distribution(0, 0.5);
 
 	std::vector<std::string> Openings;
 
@@ -474,12 +474,12 @@ bool TestNetwork(Position& pos1, Position& pos2, int Maxgames, bool earlyExit, s
 		//pos2.StartingPosition();
 		RLPlayGame(-1, pos1, pos2, data1, data2, Score);
 
-		if (i % 100 == 0 && i != 0 && earlyExit)
+		if (i % 100 == 0 && i != 0)
 		{
 			Elo::IntervalEstimate diff = Elo::estimate_rating_difference(Score[0], Score[1], Score[2]);
 			std::cout << "Result after " << i << " games: {" << Score[0] << ", " << Score[1] << ", " << Score[2] << "} (w, d, l) ELO: " << diff.estimate << " (95% " << diff.lower << ", " << diff.upper << ")       \r";
 
-			if (diff.lower > 0 || diff.upper < 0)
+			if ((diff.lower > 0 || diff.upper < 0) && earlyExit && i > 1000)
 				break;
 		}
 	}
