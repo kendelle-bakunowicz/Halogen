@@ -294,7 +294,7 @@ void Network::WriteToFile()
         hiddenLayers.at(i).WriteToFile(myfile);
     }
 
-    myfile << "OutputLayer\n";
+    myfile << "\"OutputLayer\",\n";
     outputNeuron.WriteToFile(myfile);
 
     myfile.close();

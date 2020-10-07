@@ -419,34 +419,36 @@ void RL()
 	srand(time(NULL));
 
 	std::default_random_engine generator;
-	std::normal_distribution<double> distribution(0, 0.5);
+	std::normal_distribution<double> distribution(0, 0.005);
 
 	std::vector<std::string> Openings;
 
-	std::ifstream file_in("D:\\HalogenNetworks\\book.epd");
+	std::ifstream file_in("D:\\book.epd");
 	std::string line;
 	while (std::getline(file_in, line))
 	{
 		Openings.push_back(line);
 	}
 
-	for (int i = 0; i < 1000; i++)
+	for (int i = 0; i < 10000; i++)
 	{
 		std::shuffle(std::begin(Openings), std::end(Openings), generator);
 
 		Position next = bestYet;
 		next.RandomlyChangeWeights(distribution, generator);
-		if (TestNetwork(bestYet, next, 10000, true, Openings))
+		if (TestNetwork(bestYet, next, 500, true, Openings))
 		{
-			std::cout << "Current best updated\n";
+			//std::cout << "Current best updated\n";
 			bestYet.net = next.net;
 			bestYet.net.WriteToFile();
 		}
 
-		if (i % 10 == 0 && i != 0)
+		if (i % 100 == 0 && i != 0)
 		{
+			std::shuffle(std::begin(Openings), std::end(Openings), generator);
+
 			std::cout << "\nScore against original:\n";
-			TestNetwork(original, bestYet, 10000, false, Openings);
+			TestNetwork(original, bestYet, 500, false, Openings);
 			std::cout << "\n";
 		}
 	}
@@ -457,7 +459,7 @@ bool TestNetwork(Position& pos1, Position& pos2, int Maxgames, bool earlyExit, s
 	int Score[3] = { 0, 0, 0 };
 	int i; 
 
-	for (i = 0; i < Maxgames; i++)
+	for (i = 1; i < Maxgames; i++)
 	{
 		SearchData data1;
 		SearchData data2;
@@ -474,61 +476,36 @@ bool TestNetwork(Position& pos1, Position& pos2, int Maxgames, bool earlyExit, s
 		//pos2.StartingPosition();
 		RLPlayGame(-1, pos1, pos2, data1, data2, Score);
 
-		if (i % 100 == 0 && i != 0)
+		if (i % 1 == 0 && i != 0)
 		{
 			Elo::IntervalEstimate diff = Elo::estimate_rating_difference(Score[0], Score[1], Score[2]);
-			std::cout << "Result after " << i << " games: {" << Score[0] << ", " << Score[1] << ", " << Score[2] << "} (w, d, l) ELO: " << diff.estimate << " (95% " << diff.lower << ", " << diff.upper << ")       \r";
+			std::cout << "Result after " << i * 2 << " games: {" << Score[0] << ", " << Score[1] << ", " << Score[2] << "} (w, d, l) ELO: " << diff.estimate << " (95% " << diff.lower << ", " << diff.upper << ")       \r";
 
-			if ((diff.lower > 0 || diff.upper < 0) && earlyExit && i > 1000)
+			if ((diff.upper < 0) && (!diff.estimate_infinity) && earlyExit)
 				break;
 		}
 	}
 
 	Elo::IntervalEstimate diff = Elo::estimate_rating_difference(Score[0], Score[1], Score[2]);
-	std::cout << "Result after " << i << " games: {" << Score[0] << ", " << Score[1] << ", " << Score[2] << "} (w, d, l) ELO: " << diff.estimate << " (95% " << diff.lower << ", " << diff.upper << ")" << std::endl;
+	std::cout << "Result after " << i * 2 << " games: {" << Score[0] << ", " << Score[1] << ", " << Score[2] << "} (w, d, l) ELO: " << diff.estimate << " (95% " << diff.lower << ", " << diff.upper << ")" << std::endl;
 
 	return (diff.estimate > 0);
 }
 
 void RLPlayGame(int startingSide, Position& pos1, Position& pos2, SearchData& data1, SearchData& data2, int  Score[3])
 {
-	int color = 1;
+	int color = pos1.GetTurn() ? 1 : -1;
+
+	ThreadSharedData data;
 
 	for (int move = 0; true; move++)
 	{
 		Position& current = color == startingSide ? pos1 : pos2;
 		SearchData& currentData = color == startingSide ? data1 : data2;
 
-		std::vector<Move> legalMoves;
-		LegalMoves(current, legalMoves);
-
-		int bestScore = LowINF;
-		Move bestMove;
-
-		for (auto it = legalMoves.begin(); it != legalMoves.end(); ++it)
-		{
-			current.ApplyMove(*it);
-			SearchResult result = Quiescence(current, 1, LowINF, HighINF, color, 0, 0, currentData);
-			current.RevertMove();
-
-			if (result.GetScore() > bestScore)
-			{
-				bestScore = result.GetScore();
-				bestMove = *it;
-			}
-		}
-
-		if (bestScore >= 9900)
-		{
-			if (color == startingSide)
-				Score[0]++;
-			else
-				Score[2]++;
-
-			break;
-		}
-
-		if (bestScore <= -9900)
+		SearchResult result = NegaScout(current, 1, 4, LowINF, HighINF, color, 0, true, currentData);
+		
+		if (result.GetScore() >= 9900)
 		{
 			if (color == startingSide)
 				Score[2]++;
@@ -538,23 +515,36 @@ void RLPlayGame(int startingSide, Position& pos1, Position& pos2, SearchData& da
 			break;
 		}
 
-		if (bestScore == 0 && bestMove.IsUninitialized())
+		if (result.GetScore() <= -9900)
+		{
+			if (color == startingSide)
+				Score[0]++;
+			else
+				Score[2]++;
+
+			break;
+		}
+
+		if (result.GetScore() == 0 && result.GetMove().IsUninitialized())
 		{
 			Score[1]++;
 			break;
 		}
 
-		if (move == 250)
+		if (move >= 30 && abs(result.GetScore()) < 0.15 && abs(NegaScout(startingSide ? pos2 : pos1, 1, 4, LowINF, HighINF, color, 0, true, currentData).GetScore()) < 0.15)
 		{
 			Score[1]++;
 			break;
 		}
 
-		pos1.ApplyMove(bestMove);
-		pos2.ApplyMove(bestMove);
+		if (move >= 150)
+		{
+			Score[1]++;
+			break;
+		}
 
-		//pos1.net.FeedForward(pos1.GetInputLayer());
-		//pos2.net.FeedForward(pos2.GetInputLayer());
+		pos1.ApplyMove(result.GetMove());
+		pos2.ApplyMove(result.GetMove());
 
 		//current.Print();
 		color = -color;

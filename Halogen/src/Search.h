@@ -90,4 +90,5 @@ Move MultithreadedSearch(const Position& position, int allowedTimeMs, unsigned i
 uint64_t BenchSearch(const Position& position, int maxSearchDepth = MAX_DEPTH);
 
 SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha, int beta, int colour, unsigned int distanceFromRoot, int depthRemaining, SearchData& locals);
+SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthRemaining, int alpha, int beta, int colour, unsigned int distanceFromRoot, bool allowedNull, SearchData& locals);
 

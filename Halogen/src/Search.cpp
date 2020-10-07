@@ -34,7 +34,6 @@ SearchResult UseSearchTBScore(unsigned int result, int staticEval);
 SearchResult UseRootTBScore(unsigned int result, int staticEval);
 
 Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, ThreadSharedData& sharedData, unsigned int threadID, int maxSearchDepth = MAX_DEPTH, SearchData locals = SearchData());
-SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthRemaining, int alpha, int beta, int colour, unsigned int distanceFromRoot, bool allowedNull, SearchData& locals, ThreadSharedData& sharedData);
 void UpdateAlpha(int Score, int& a, std::vector<Move>& moves, const size_t& i, unsigned int distanceFromRoot, SearchData& locals);
 void UpdateScore(int newScore, int& Score, Move& bestMove, std::vector<Move>& moves, const size_t& i);
 
@@ -291,7 +290,7 @@ Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, 
 
 		sharedData.AddNode();	//make the root node count. Otherwise when re-searching a position and getting an immediant hash hit the nodes searched is zero
 
-		SearchResult search = NegaScout(position, depth, depth, alpha, beta, position.GetTurn() ? 1 : -1, 0, false, locals, sharedData);
+		SearchResult search = NegaScout(position, depth, depth, alpha, beta, position.GetTurn() ? 1 : -1, 0, false, locals);
 		int score = search.GetScore();
 
 		if (depth > 1 && locals.timeManage.AbortSearch(0)) { break; }
@@ -327,7 +326,7 @@ Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, 
 	return move;
 }
 
-SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthRemaining, int alpha, int beta, int colour, unsigned int distanceFromRoot, bool allowedNull, SearchData& locals, ThreadSharedData& sharedData)
+SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthRemaining, int alpha, int beta, int colour, unsigned int distanceFromRoot, bool allowedNull, SearchData& locals)
 {
 #ifdef _DEBUG
 	/*Add any code in here that tests the position for validity*/
@@ -338,8 +337,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 
 	locals.PvTable[distanceFromRoot].clear();
 
-	if (distanceFromRoot > 0 && locals.timeManage.AbortSearch(sharedData.getNodes())) return -1;		//we must check later that we don't let this score pollute the transposition table
-	if (sharedData.ThreadAbort(initialDepth)) return -1;												//another thread has finished searching this depth: ABORT!
 	if (distanceFromRoot >= MAX_DEPTH) return 0;														//If we are 100 moves from root I think we can assume its a drawn position
 
 	//check for draw
@@ -352,7 +349,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		unsigned int result = ProbeTBRoot(position);
 		if (result != TB_RESULT_FAILED)
 		{
-			sharedData.AddTBHit();
 			return UseRootTBScore(result, colour * EvaluatePositionNet(position, locals.evalTable));
 		}
 	}
@@ -363,32 +359,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		unsigned int result = ProbeTBSearch(position);
 		if (result != TB_RESULT_FAILED)
 		{
-			sharedData.AddTBHit();
 			return UseSearchTBScore(result, colour * EvaluatePositionNet(position, locals.evalTable));
-		}
-	}
-
-	/*Query the transpotition table*/
-	TTEntry entry = tTable.GetEntry(position.GetZobristKey());
-	if (CheckEntry(entry, position.GetZobristKey(), depthRemaining))
-	{
-		tTable.SetNonAncient(position.GetZobristKey(), position.GetTurnCount(), distanceFromRoot);
-
-		int rep = 1;
-		uint64_t current = position.GetZobristKey();
-
-		for (unsigned int i = 0; i < position.GetPreviousKeysSize(); i++)	//note Previous keys will not contain the current key, hence rep starts at one
-		{
-			if (position.GetPreviousKey(i) == current)
-			{
-				rep++;
-				break;
-			}
-		}
-
-		if (rep < 2)												//don't use the transposition if we have been at this position in the past
-		{
-			if (UseTransposition(entry, distanceFromRoot, alpha, beta)) return SearchResult(entry.GetScore(), entry.GetMove());
 		}
 	}
 
@@ -406,13 +377,13 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		unsigned int reduction = R + (depthRemaining >= static_cast<int>(VariableNullDepth));
 
 		position.ApplyNullMove();
-		int score = -NegaScout(position, initialDepth, depthRemaining - reduction - 1, -beta, -beta + 1, -colour, distanceFromRoot + 1, false, locals, sharedData).GetScore();
+		int score = -NegaScout(position, initialDepth, depthRemaining - reduction - 1, -beta, -beta + 1, -colour, distanceFromRoot + 1, false, locals).GetScore();
 		position.RevertNullMove();
 
 		//Verification search worth about ~5 elo. 
 		if (score >= beta)
 		{
-			SearchResult result = NegaScout(position, initialDepth, depthRemaining - reduction - 1, beta - 1, beta, colour, distanceFromRoot, false, locals, sharedData);
+			SearchResult result = NegaScout(position, initialDepth, depthRemaining - reduction - 1, beta - 1, beta, colour, distanceFromRoot, false, locals);
 
 			if (result.GetScore() >= beta)
 				return result;
@@ -435,10 +406,9 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	if (!hashMove.IsUninitialized() && position.GetFiftyMoveCount() < 100)	//if its 50 move rule we need to skip this and figure out if its checkmate or draw below
 	{
 		position.ApplyMove(hashMove);
-		sharedData.AddNode();
 		tTable.PreFetch(position.GetZobristKey());							//load the transposition into l1 cache. ~5% speedup
 		int extendedDepth = depthRemaining + extension(position, hashMove, alpha, beta);
-		int newScore = -NegaScout(position, initialDepth, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true, locals, sharedData).GetScore();
+		int newScore = -NegaScout(position, initialDepth, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true, locals).GetScore();
 		position.RevertMove();
 
 		if (newScore > Score)
@@ -457,10 +427,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		{
 			AddKiller(hashMove, distanceFromRoot, locals.KillerMoves);
 			AddHistory(hashMove, depthRemaining, locals.HistoryMatrix, position.GetTurn());
-
-			if (!locals.timeManage.AbortSearch(sharedData.getNodes()) && !(sharedData.ThreadAbort(initialDepth)))
-				AddScoreToTable(Score, alpha, position, depthRemaining, distanceFromRoot, beta, bestMove);
-
 			return SearchResult(Score, bestMove);
 		}
 
@@ -491,7 +457,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 			continue;
 
 		position.ApplyMove(moves.at(i));
-		sharedData.AddNode();
 		tTable.PreFetch(position.GetZobristKey());							//load the transposition into l1 cache. ~5% speedup
 
 		//futility pruning
@@ -507,7 +472,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		if (LMR(InCheck, position, depthRemaining) && i > 3)
 		{
 			int reduction = Reduction(depthRemaining, static_cast<int>(i), alpha, beta);
-			int score = -NegaScout(position, initialDepth, extendedDepth - 1 - reduction, -a - 1, -a, -colour, distanceFromRoot + 1, true, locals, sharedData).GetScore();
+			int score = -NegaScout(position, initialDepth, extendedDepth - 1 - reduction, -a - 1, -a, -colour, distanceFromRoot + 1, true, locals).GetScore();
 
 			if (score <= a)
 			{
@@ -516,10 +481,10 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 			}
 		}
 
-		int newScore = -NegaScout(position, initialDepth, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true, locals, sharedData).GetScore();
+		int newScore = -NegaScout(position, initialDepth, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true, locals).GetScore();
 		if (newScore > a && newScore < beta && i >= 1)
 		{	
-			newScore = -NegaScout(position, initialDepth, extendedDepth - 1, -beta, -a, -colour, distanceFromRoot + 1, true, locals, sharedData).GetScore();
+			newScore = -NegaScout(position, initialDepth, extendedDepth - 1, -beta, -a, -colour, distanceFromRoot + 1, true, locals).GetScore();
 		}
 
 		position.RevertMove();
@@ -536,9 +501,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 
 		b = a + 1;				//Set a new zero width window
 	}
-
-	if (!locals.timeManage.AbortSearch(sharedData.getNodes()) && !sharedData.ThreadAbort(initialDepth))
-		AddScoreToTable(Score, alpha, position, depthRemaining, distanceFromRoot, beta, bestMove);
 
 	return SearchResult(Score, bestMove);
 }
