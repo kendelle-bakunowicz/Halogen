@@ -436,19 +436,19 @@ void RL()
 
 		Position next = bestYet;
 		next.RandomlyChangeWeights(distribution, generator);
-		if (TestNetwork(bestYet, next, 500, true, Openings))
+		if (TestNetwork(bestYet, next, 5000, true, Openings))
 		{
 			//std::cout << "Current best updated\n";
 			bestYet.net = next.net;
 			bestYet.net.WriteToFile();
 		}
 
-		if (i % 100 == 0 && i != 0)
+		if (i % 10 == 0 && i != 0)
 		{
 			std::shuffle(std::begin(Openings), std::end(Openings), generator);
 
 			std::cout << "\nScore against original:\n";
-			TestNetwork(original, bestYet, 500, false, Openings);
+			TestNetwork(original, bestYet, 5000, false, Openings);
 			std::cout << "\n";
 		}
 	}
@@ -541,6 +541,11 @@ void RLPlayGame(int startingSide, Position& pos1, Position& pos2, SearchData& da
 		{
 			Score[1]++;
 			break;
+		}
+
+		if (result.GetMove().IsUninitialized())
+		{
+			std::cout << "ERROR\n";
 		}
 
 		pos1.ApplyMove(result.GetMove());
