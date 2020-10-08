@@ -2,6 +2,8 @@
 #include "Search.h"
 #include "elo.h"
 #include <thread>
+#include <ppl.h>
+#include <windows.h>
 
 using namespace::std;
 
@@ -495,30 +497,22 @@ void RL()
 double TestNetwork(Position& pos1, Position& pos2, int Maxgames, bool earlyExit, std::vector<std::string>& openings)
 {
 	int Score[3] = { 0, 0, 0 };
-	int i; 
 
-	for (i = 1; i < Maxgames; i++)
+	concurrency::parallel_for(size_t(1), size_t(Maxgames), [&](size_t i)
 	{
-		pos1.InitialiseFromFen(openings[i]);
-		pos2.InitialiseFromFen(openings[i]);
-		RLPlayGame(1, pos1, pos2, Score);
+		Position a = pos1;
+		Position b = pos2;
+		a.InitialiseFromFen(openings[i]);
+		b.InitialiseFromFen(openings[i]);
+		RLPlayGame(1, a, b, Score);
 
-		pos1.InitialiseFromFen(openings[i]);
-		pos2.InitialiseFromFen(openings[i]);
-		RLPlayGame(-1, pos1, pos2, Score);
-
-		if (i % 10 == 0 && i != 0)
-		{
-			Elo::IntervalEstimate diff = Elo::estimate_rating_difference(Score[0], Score[1], Score[2]);
-			std::cout << "Result after " << i * 2 << " games: {" << Score[0] << ", " << Score[1] << ", " << Score[2] << "} (w, d, l) ELO: " << diff.estimate << " (95% " << diff.lower << ", " << diff.upper << ")               \r";
-
-			if ((diff.upper < 0 || diff.lower > 0) && (!diff.estimate_infinity) && earlyExit)
-				break;
-		}
-	}
+		a.InitialiseFromFen(openings[i]);
+		b.InitialiseFromFen(openings[i]);
+		RLPlayGame(-1, a, b, Score);
+	});
 
 	Elo::IntervalEstimate diff = Elo::estimate_rating_difference(Score[0], Score[1], Score[2]);
-	std::cout << "Result after " << i * 2 << " games: {" << Score[0] << ", " << Score[1] << ", " << Score[2] << "} (w, d, l) ELO: " << diff.estimate << " (95% " << diff.lower << ", " << diff.upper << ")" << std::endl;
+	std::cout << "Result after " << Maxgames * 2 << " games: {" << Score[0] << ", " << Score[1] << ", " << Score[2] << "} (w, d, l) ELO: " << diff.estimate << " (95% " << diff.lower << ", " << diff.upper << ")" << std::endl;
 
 	return diff.estimate;
 }
@@ -535,7 +529,7 @@ void RLPlayGame(int startingSide, Position& pos1, Position& pos2, int  Score[3])
 		Position& current = color == startingSide ? pos1 : pos2;
 		SearchData& currentData = color == startingSide ? data1 : data2;
 
-		SearchResult result = NegaScout(current, 1, 2, LowINF, HighINF, color, 0, true, currentData);
+		SearchResult result = NegaScout(current, 1, 4, LowINF, HighINF, color, 0, true, currentData);
 
 		if (result.GetScore() <= -9900)
 		{
