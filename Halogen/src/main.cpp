@@ -456,10 +456,10 @@ void RL()
 
 	for (int i = 0; i < 10000; i++)
 	{
-		if (i % 25 == 0)
+		if (i % 1000 == 0 && i != 0)
 		{
 			std::cout << "\nScore against original:\n";
-			TestNetwork(bestYet, original, 50, false, Openings);
+			TestNetwork(bestYet, original, 5000, false, Openings);
 			std::cout << "\n";
 			bestYet.net.WriteToFile();
 		}
@@ -474,18 +474,21 @@ void RL()
 
 		double elo = TestNetwork(nextPlus, nextMinus, 50, false, Openings);
 
-		/*if (elo > 0)
+		if (elo > 0)
 		{
 			//nextPlus was better
-			bestYet.RandomlyChangeWeights(distribution3, generator3, 0.2);
+			bestYet.RandomlyChangeWeights(distribution3, generator3, 0.02);
 		}
 		else if (elo < 0)
 		{
 			//nextMinus was better
-			bestYet.RandomlyChangeWeights(distribution3, generator3, -0.2);
-		}*/
-
-		bestYet.RandomlyChangeWeights(distribution3, generator3, elo / 10);
+			bestYet.RandomlyChangeWeights(distribution3, generator3, -0.02);
+		}
+		else
+		{
+			//neither was better. We still need to generate random numbers so it stays in sync with gen1 and gen2
+			bestYet.RandomlyChangeWeights(distribution3, generator3, 0);
+		}
 	}
 }
 
@@ -504,7 +507,7 @@ double TestNetwork(Position& pos1, Position& pos2, int Maxgames, bool earlyExit,
 		pos2.InitialiseFromFen(openings[i]);
 		RLPlayGame(-1, pos1, pos2, Score);
 
-		if (i % 1 == 0 && i != 0)
+		if (i % 10 == 0 && i != 0)
 		{
 			Elo::IntervalEstimate diff = Elo::estimate_rating_difference(Score[0], Score[1], Score[2]);
 			std::cout << "Result after " << i * 2 << " games: {" << Score[0] << ", " << Score[1] << ", " << Score[2] << "} (w, d, l) ELO: " << diff.estimate << " (95% " << diff.lower << ", " << diff.upper << ")               \r";

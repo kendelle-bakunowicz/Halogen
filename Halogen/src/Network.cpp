@@ -1,7 +1,7 @@
 #include "Network.h"
 
 static const char* WeightsTXT[] = {
-    #include "0.weights"  
+    #include "ancient_course.network"  
     ""
 };
 
