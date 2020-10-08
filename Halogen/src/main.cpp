@@ -531,7 +531,7 @@ void RLPlayGame(int startingSide, Position& pos1, Position& pos2, int  Score[3])
 		Position& current = color == startingSide ? pos1 : pos2;
 		SearchData& currentData = color == startingSide ? data1 : data2;
 
-		SearchResult result = NegaScout(current, 1, 2, LowINF, HighINF, color, 0, true, currentData);
+		SearchResult result = NegaScout(current, 1, 4, LowINF, HighINF, color, 0, true, currentData);
 		
 		if (result.GetScore() >= 9900)
 		{
