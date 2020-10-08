@@ -51,7 +51,7 @@ public:
 	std::vector<deltaPoint>& CalculateMoveDelta(Move move);				//A vector which calculates the CHANGE in each input paramiter
 	std::vector<float> GetInputLayer() const;
 
-	void RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng);
+	void RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng, double multiplier);
 
 private:
 	uint64_t key;

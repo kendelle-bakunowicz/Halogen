@@ -36,7 +36,7 @@ struct Neuron
     std::vector<float> weights;
     float bias;
 
-    void RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng);
+    void RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng, double multiplier);
     void WriteToFile(std::ofstream& myfile);
 };
 
@@ -50,7 +50,7 @@ struct HiddenLayer
 
     std::vector<float> zeta;
 
-    void RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng);
+    void RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng, double multiplier);
     void WriteToFile(std::ofstream& myfile);
 
 private:
@@ -66,7 +66,7 @@ struct Network
     void ApplyInverseDelta();     //for un-make moves
     float QuickEval();                                                         //when used with above, this just calculates starting from the alpha of first hidden layer and skips input -> hidden
 
-    void RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng);
+    void RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng, double multiplier);
 
     void WriteToFile();
 

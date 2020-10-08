@@ -444,9 +444,9 @@ std::vector<float> Position::GetInputLayer() const
 	return ret;
 }
 
-void Position::RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng)
+void Position::RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng, double multiplier)
 {
-	net.RandomlyChangeWeights(normal, rng);
+	net.RandomlyChangeWeights(normal, rng, multiplier);
 }
 
 std::vector<deltaPoint>& Position::CalculateMoveDelta(Move move)

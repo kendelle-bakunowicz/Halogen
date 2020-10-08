@@ -15,7 +15,7 @@ void RL();
 
 bool TestNetwork(Position& pos1, Position& pos2, int Maxgames, bool earlyExit, std::vector<std::string>& openings);
 
-void RLPlayGame(int startingSide, Position& pos1, Position& pos2, SearchData& data1, SearchData& data2, int  Score[3]);
+void RLPlayGame(int startingSide, Position& pos1, Position& pos2, int  Score[3]);
 
 string version = "7";  
 
@@ -48,6 +48,23 @@ int main(int argc, char* argv[])
 	unsigned int ThreadCount = 1;
 
 	if (argc == 2 && strcmp(argv[1], "bench") == 0) { Bench(); return 0; }	//currently only supports bench from command line for openBench integration
+
+	/*std::default_random_engine generator1;
+	std::normal_distribution<double> distribution1(0, 0.01);
+
+	std::default_random_engine generator2;
+	std::normal_distribution<double> distribution2(0, 0.01);
+
+	std::cout << distribution1(generator1) << std::endl;
+	std::cout << distribution2(generator2) << std::endl;
+	std::cout << distribution1(generator1) << std::endl;
+	std::cout << distribution2(generator2) << std::endl;
+	std::cout << distribution1(generator1) << std::endl;
+	std::cout << distribution2(generator2) << std::endl;
+	std::cout << distribution1(generator1) << std::endl;
+	std::cout << distribution2(generator2) << std::endl;
+	std::cout << distribution1(generator1) << std::endl;
+	std::cout << distribution2(generator2) << std::endl;*/
 
 	RL();
 
@@ -418,8 +435,15 @@ void RL()
 	Position bestYet;
 	srand(time(NULL));
 
-	std::default_random_engine generator;
-	std::normal_distribution<double> distribution(0, 0.005);
+	//All distributions will output the same series of values which is important
+	std::default_random_engine generator1;
+	std::normal_distribution<double> distribution1(0, 0.1);
+	std::default_random_engine generator2;
+	std::normal_distribution<double> distribution2(0, 0.1);
+	std::default_random_engine generator3;
+	std::normal_distribution<double> distribution3(0, 0.1);
+
+	std::default_random_engine shuffleGenerator;
 
 	std::vector<std::string> Openings;
 
@@ -432,25 +456,33 @@ void RL()
 
 	for (int i = 0; i < 10000; i++)
 	{
-		std::shuffle(std::begin(Openings), std::end(Openings), generator);
-
-		Position next = bestYet;
-		next.RandomlyChangeWeights(distribution, generator);
-		if (TestNetwork(bestYet, next, 5000, true, Openings))
+		if (i % 10 == 0)
 		{
-			//std::cout << "Current best updated\n";
-			bestYet.net = next.net;
-			bestYet.net.WriteToFile();
-		}
-
-		if (i % 10 == 0 && i != 0)
-		{
-			std::shuffle(std::begin(Openings), std::end(Openings), generator);
-
 			std::cout << "\nScore against original:\n";
-			TestNetwork(original, bestYet, 5000, false, Openings);
+			TestNetwork(bestYet, original, 50, false, Openings);
 			std::cout << "\n";
 		}
+
+		std::shuffle(std::begin(Openings), std::end(Openings), shuffleGenerator);
+
+		Position nextPlus = bestYet;
+		Position nextMinus = bestYet;
+
+		nextPlus.RandomlyChangeWeights(distribution1, generator1, 1);
+		nextMinus.RandomlyChangeWeights(distribution2, generator2, -1);
+
+		if (TestNetwork(nextPlus, nextMinus, 50, true, Openings))
+		{
+			//nextPlus was better
+			bestYet.RandomlyChangeWeights(distribution3, generator3, 0.2);
+		}
+		else
+		{
+			//nextMinus was better
+			bestYet.RandomlyChangeWeights(distribution3, generator3, -0.2);
+		}
+
+		bestYet.net.WriteToFile();
 	}
 }
 
@@ -461,27 +493,20 @@ bool TestNetwork(Position& pos1, Position& pos2, int Maxgames, bool earlyExit, s
 
 	for (i = 1; i < Maxgames; i++)
 	{
-		SearchData data1;
-		SearchData data2;
-		
 		pos1.InitialiseFromFen(openings[i]);
 		pos2.InitialiseFromFen(openings[i]);
-		//pos1.StartingPosition();
-		//pos2.StartingPosition();
-		RLPlayGame(1, pos1, pos2, data1, data2, Score);
+		RLPlayGame(1, pos1, pos2, Score);
 
 		pos1.InitialiseFromFen(openings[i]);
 		pos2.InitialiseFromFen(openings[i]);
-		//pos1.StartingPosition();
-		//pos2.StartingPosition();
-		RLPlayGame(-1, pos1, pos2, data1, data2, Score);
+		RLPlayGame(-1, pos1, pos2, Score);
 
 		if (i % 1 == 0 && i != 0)
 		{
 			Elo::IntervalEstimate diff = Elo::estimate_rating_difference(Score[0], Score[1], Score[2]);
-			std::cout << "Result after " << i * 2 << " games: {" << Score[0] << ", " << Score[1] << ", " << Score[2] << "} (w, d, l) ELO: " << diff.estimate << " (95% " << diff.lower << ", " << diff.upper << ")       \r";
+			std::cout << "Result after " << i * 2 << " games: {" << Score[0] << ", " << Score[1] << ", " << Score[2] << "} (w, d, l) ELO: " << diff.estimate << " (95% " << diff.lower << ", " << diff.upper << ")               \r";
 
-			if ((diff.upper < 0) && (!diff.estimate_infinity) && earlyExit)
+			if ((diff.upper < 0 || diff.lower > 0) && (!diff.estimate_infinity) && earlyExit)
 				break;
 		}
 	}
@@ -492,18 +517,21 @@ bool TestNetwork(Position& pos1, Position& pos2, int Maxgames, bool earlyExit, s
 	return (diff.estimate > 0);
 }
 
-void RLPlayGame(int startingSide, Position& pos1, Position& pos2, SearchData& data1, SearchData& data2, int  Score[3])
+void RLPlayGame(int startingSide, Position& pos1, Position& pos2, int  Score[3])
 {
-	int color = pos1.GetTurn() ? 1 : -1;
+	SearchData data1;
+	SearchData data2;
 
-	ThreadSharedData data;
+	int color = pos1.GetTurn() ? 1 : -1;
 
 	for (int move = 0; true; move++)
 	{
+		//pos1.Print();
+
 		Position& current = color == startingSide ? pos1 : pos2;
 		SearchData& currentData = color == startingSide ? data1 : data2;
 
-		SearchResult result = NegaScout(current, 1, 4, LowINF, HighINF, color, 0, true, currentData);
+		SearchResult result = NegaScout(current, 1, 2, LowINF, HighINF, color, 0, true, currentData);
 		
 		if (result.GetScore() >= 9900)
 		{
@@ -531,11 +559,11 @@ void RLPlayGame(int startingSide, Position& pos1, Position& pos2, SearchData& da
 			break;
 		}
 
-		if (move >= 30 && abs(result.GetScore()) < 0.15 && abs(NegaScout(startingSide ? pos2 : pos1, 1, 4, LowINF, HighINF, color, 0, true, currentData).GetScore()) < 0.15)
+		/*if (move >= 30 && abs(result.GetScore()) < 0.15 && abs(NegaScout(startingSide ? pos2 : pos1, 1, 4, LowINF, HighINF, color, 0, true, currentData).GetScore()) < 0.15)
 		{
 			Score[1]++;
 			break;
-		}
+		}*/
 
 		if (move >= 150)
 		{

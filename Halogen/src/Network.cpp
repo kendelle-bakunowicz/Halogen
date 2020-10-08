@@ -1,7 +1,7 @@
 #include "Network.h"
 
 static const char* WeightsTXT[] = {
-    #include "ancient_course.network"  
+    #include "0.weights"  
     ""
 };
 
@@ -93,13 +93,13 @@ float Neuron::FeedForward(std::vector<float>& input, bool UseReLU) const
     return ret;
 }
 
-void Neuron::RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng)
+void Neuron::RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng, double multiplier)
 {
     for (int i = 0; i < weights.size(); i++)
     {
-        weights[i] += normal(rng);
+        weights[i] += normal(rng) * multiplier;
     }
-    bias += normal(rng);
+    bias += normal(rng) * multiplier;
 }
 
 void Neuron::WriteToFile(std::ofstream& myfile)
@@ -162,11 +162,11 @@ void HiddenLayer::ApplyDelta(std::vector<deltaPoint>& deltaVec)
     }
 }
 
-void HiddenLayer::RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng)
+void HiddenLayer::RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng, double multiplier)
 {
     for (size_t j = 0; j < neurons.size(); j++)
     {
-        neurons[j].RandomlyChangeWeights(normal, rng);
+        neurons[j].RandomlyChangeWeights(normal, rng, multiplier);
     }
 
     //reinitialize the weightTranspose
@@ -255,13 +255,13 @@ float Network::QuickEval()
     return zeta;
 }
 
-void Network::RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng)
+void Network::RandomlyChangeWeights(std::normal_distribution<double>& normal, std::default_random_engine& rng, double multiplier)
 {
-    outputNeuron.RandomlyChangeWeights(normal, rng);
+    outputNeuron.RandomlyChangeWeights(normal, rng, multiplier);
 
     for (int i = 0; i < hiddenLayers.size(); i++)
     {
-        hiddenLayers[0].RandomlyChangeWeights(normal, rng);
+        hiddenLayers[0].RandomlyChangeWeights(normal, rng, multiplier);
     }
 }
 
