@@ -13,7 +13,7 @@ void Bench();
 
 void RL();
 
-bool TestNetwork(Position& pos1, Position& pos2, int Maxgames, bool earlyExit, std::vector<std::string>& openings);
+double TestNetwork(Position& pos1, Position& pos2, int Maxgames, bool earlyExit, std::vector<std::string>& openings);
 
 void RLPlayGame(int startingSide, Position& pos1, Position& pos2, int  Score[3]);
 
@@ -437,11 +437,11 @@ void RL()
 
 	//All distributions will output the same series of values which is important
 	std::default_random_engine generator1;
-	std::normal_distribution<double> distribution1(0, 0.1);
+	std::normal_distribution<double> distribution1(0, 0.05);
 	std::default_random_engine generator2;
-	std::normal_distribution<double> distribution2(0, 0.1);
+	std::normal_distribution<double> distribution2(0, 0.05);
 	std::default_random_engine generator3;
-	std::normal_distribution<double> distribution3(0, 0.1);
+	std::normal_distribution<double> distribution3(0, 0.05);
 
 	std::default_random_engine shuffleGenerator;
 
@@ -456,11 +456,12 @@ void RL()
 
 	for (int i = 0; i < 10000; i++)
 	{
-		if (i % 10 == 0)
+		if (i % 25 == 0)
 		{
 			std::cout << "\nScore against original:\n";
 			TestNetwork(bestYet, original, 50, false, Openings);
 			std::cout << "\n";
+			bestYet.net.WriteToFile();
 		}
 
 		std::shuffle(std::begin(Openings), std::end(Openings), shuffleGenerator);
@@ -471,22 +472,24 @@ void RL()
 		nextPlus.RandomlyChangeWeights(distribution1, generator1, 1);
 		nextMinus.RandomlyChangeWeights(distribution2, generator2, -1);
 
-		if (TestNetwork(nextPlus, nextMinus, 50, true, Openings))
+		double elo = TestNetwork(nextPlus, nextMinus, 50, false, Openings);
+
+		/*if (elo > 0)
 		{
 			//nextPlus was better
 			bestYet.RandomlyChangeWeights(distribution3, generator3, 0.2);
 		}
-		else
+		else if (elo < 0)
 		{
 			//nextMinus was better
 			bestYet.RandomlyChangeWeights(distribution3, generator3, -0.2);
-		}
+		}*/
 
-		bestYet.net.WriteToFile();
+		bestYet.RandomlyChangeWeights(distribution3, generator3, elo / 10);
 	}
 }
 
-bool TestNetwork(Position& pos1, Position& pos2, int Maxgames, bool earlyExit, std::vector<std::string>& openings)
+double TestNetwork(Position& pos1, Position& pos2, int Maxgames, bool earlyExit, std::vector<std::string>& openings)
 {
 	int Score[3] = { 0, 0, 0 };
 	int i; 
@@ -514,7 +517,7 @@ bool TestNetwork(Position& pos1, Position& pos2, int Maxgames, bool earlyExit, s
 	Elo::IntervalEstimate diff = Elo::estimate_rating_difference(Score[0], Score[1], Score[2]);
 	std::cout << "Result after " << i * 2 << " games: {" << Score[0] << ", " << Score[1] << ", " << Score[2] << "} (w, d, l) ELO: " << diff.estimate << " (95% " << diff.lower << ", " << diff.upper << ")" << std::endl;
 
-	return (diff.estimate > 0);
+	return diff.estimate;
 }
 
 void RLPlayGame(int startingSide, Position& pos1, Position& pos2, int  Score[3])
@@ -526,29 +529,17 @@ void RLPlayGame(int startingSide, Position& pos1, Position& pos2, int  Score[3])
 
 	for (int move = 0; true; move++)
 	{
-		//pos1.Print();
-
 		Position& current = color == startingSide ? pos1 : pos2;
 		SearchData& currentData = color == startingSide ? data1 : data2;
 
-		SearchResult result = NegaScout(current, 1, 4, LowINF, HighINF, color, 0, true, currentData);
-		
-		if (result.GetScore() >= 9900)
-		{
-			if (color == startingSide)
-				Score[2]++;
-			else
-				Score[0]++;
-
-			break;
-		}
+		SearchResult result = NegaScout(current, 1, 2, LowINF, HighINF, color, 0, true, currentData);
 
 		if (result.GetScore() <= -9900)
 		{
 			if (color == startingSide)
-				Score[0]++;
-			else
 				Score[2]++;
+			else
+				Score[0]++;
 
 			break;
 		}
@@ -558,12 +549,6 @@ void RLPlayGame(int startingSide, Position& pos1, Position& pos2, int  Score[3])
 			Score[1]++;
 			break;
 		}
-
-		/*if (move >= 30 && abs(result.GetScore()) < 0.15 && abs(NegaScout(startingSide ? pos2 : pos1, 1, 4, LowINF, HighINF, color, 0, true, currentData).GetScore()) < 0.15)
-		{
-			Score[1]++;
-			break;
-		}*/
 
 		if (move >= 150)
 		{
