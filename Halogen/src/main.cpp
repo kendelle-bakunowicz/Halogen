@@ -458,10 +458,10 @@ void RL()
 
 	for (int i = 0; ; i++)
 	{
-		if (i % 1000 == 0 && i != 0)
+		if (i % 100 == 0 && i != 0)
 		{
 			std::cout << "\nScore against original:\n";
-			TestNetwork(bestYet, original, 5000, false, Openings);
+			TestNetwork(bestYet, original, 500, false, Openings);
 			std::cout << "\n";
 			bestYet.net.WriteToFile();
 		}
@@ -529,7 +529,7 @@ void RLPlayGame(int startingSide, Position& pos1, Position& pos2, int  Score[3])
 		Position& current = color == startingSide ? pos1 : pos2;
 		SearchData& currentData = color == startingSide ? data1 : data2;
 
-		SearchResult result = NegaScout(current, 1, 4, LowINF, HighINF, color, 0, true, currentData);
+		SearchResult result = NegaScout(current, 1, 6, LowINF, HighINF, color, 0, true, currentData);
 
 		if (result.GetScore() <= -9900)
 		{

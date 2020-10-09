@@ -435,12 +435,6 @@ std::vector<float> Position::GetInputLayer() const
 		}
 	}
 
-	ret.push_back(GetTurn());
-	ret.push_back(CanCastleWhiteKingside());
-	ret.push_back(CanCastleWhiteQueenside());
-	ret.push_back(CanCastleBlackKingside());
-	ret.push_back(CanCastleBlackQueenside());
-
 	return ret;
 }
 
@@ -451,13 +445,10 @@ void Position::RandomlyChangeWeights(std::normal_distribution<double>& normal, s
 
 std::vector<deltaPoint>& Position::CalculateMoveDelta(Move move)
 {
+	if (move.IsUninitialized()) return delta;		//null move
+
 	delta.clear();
 	const BoardParamiterData prev = GetPreviousParamiters();
-
-	//Change of turn
-	delta.push_back({ modifier(12 * 64), (GetTurn() * 2 - 1) });	//+1 if its now whites turn and -1 if its now blacks turn
-
-	if (move.IsUninitialized()) return delta;		//null move
 
 	if (!move.IsPromotion())
 	{
@@ -472,16 +463,6 @@ std::vector<deltaPoint>& Position::CalculateMoveDelta(Move move)
 	//Captures
 	if ((move.IsCapture()) && (move.GetFlag() != EN_PASSANT))
 		delta.push_back({ modifier(GetPreviousBoard().GetSquare(move.GetTo()) * 64 + move.GetTo()), -1 });
-
-	//Castling
-	if (CanCastleWhiteKingside() != prev.CanCastleWhiteKingside())					//if casteling rights changed (we can only lose casteling rights when doing a move)
-		delta.push_back({ modifier(12 * 64 + 1), -1 });
-	if (CanCastleWhiteQueenside() != prev.CanCastleWhiteQueenside())
-		delta.push_back({ modifier(12 * 64 + 2), -1 });
-	if (CanCastleBlackKingside() != prev.CanCastleBlackKingside())
-		delta.push_back({ modifier(12 * 64 + 3), -1 });
-	if (CanCastleBlackQueenside() != prev.CanCastleBlackQueenside())
-		delta.push_back({ modifier(12 * 64 + 4), -1 });
 
 	if (move.GetFlag() == KING_CASTLE)
 	{

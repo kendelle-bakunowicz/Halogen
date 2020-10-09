@@ -1,7 +1,7 @@
 #include "Network.h"
 
 static const char* WeightsTXT[] = {
-    #include "ancient_course.network"  
+    #include "736x128_blank.network"  
     ""
 };
 
@@ -280,7 +280,7 @@ void Network::WriteToFile()
     std::string str(10, 0);
     std::generate_n(str.begin(), 10, randchar);
 
-    std::ofstream myfile("D:\\HalogenNetworks\\" + str + ".network");
+    std::ofstream myfile("D:\\HalogenNetworksx128\\" + str + ".network");
     if (!myfile.is_open())
     {
         std::cout << "Could not write network to output file!";
