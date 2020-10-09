@@ -456,7 +456,7 @@ void RL()
 		Openings.push_back(line);
 	}
 
-	for (int i = 0; i < 10000; i++)
+	for (int i = 0; ; i++)
 	{
 		if (i % 1000 == 0 && i != 0)
 		{
