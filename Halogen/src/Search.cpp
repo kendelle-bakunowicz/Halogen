@@ -279,7 +279,6 @@ Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, 
 	int beta = 30000;
 	int prevScore = 0;
 	bool aspirationReSearch = false;
-	int delta = std::max(1, 25 + ((threadID % 2 == 0) ? 1 : -1) * int(4.0 * log2(threadID + 1)));
 
 	for (int depth = 1; (!locals.timeManage.AbortSearch(0) && locals.timeManage.ContinueSearch() && depth <= maxSearchDepth) || depth == 1; )	//depth == 1 is a temporary band-aid to illegal moves under time pressure.
 	{
@@ -318,8 +317,8 @@ Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, 
 		move = search.GetMove();	//this is only hit if the continue before is not hit
 		sharedData.ReportResult(depth, searchTime.ElapsedMs(), score, alpha, beta, position, move, locals);
 
-		alpha = score - delta;
-		beta =  score + delta;
+		alpha = score - 25;
+		beta =  score + 25;
 
 		prevScore = score;
 	}
