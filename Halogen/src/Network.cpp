@@ -1,7 +1,7 @@
 #include "Network.h"
 
 static const char* WeightsTXT[] = {
-    #include "ZxKHsEZCfK.network" 
+    #include "ancient_course.network"   
     ""
 };
 
@@ -125,14 +125,14 @@ std::vector<float> HiddenLayer::FeedForward(std::vector<float>& input, bool UseR
     return zeta;
 }
 
-void HiddenLayer::ApplyDelta(std::vector<deltaPoint>& deltaVec, float forward)
+void HiddenLayer::ApplyDelta(std::vector<deltaPoint>& deltaVec)
 {
     size_t neuronCount = zeta.size();
     size_t deltaCount = deltaVec.size();
 
     for (size_t index = 0; index < deltaCount; index++)
     {
-        float deltaValue = deltaVec[index].delta * forward;
+        float deltaValue = deltaVec[index].delta;
         size_t weightTransposeIndex = deltaVec[index].index * neuronCount;
 
         for (size_t neuron = 0; neuron < neuronCount; neuron++)
@@ -153,10 +153,22 @@ Network::Network(std::vector<std::vector<float>> inputs, std::vector<size_t> Neu
     {
         hiddenLayers.push_back(HiddenLayer(inputs.at(i), NeuronCount.at(i)));
     }
+
+    for (size_t i = 0; i < 100; i++)
+    {
+        OldZeta.push_back(std::vector<float>(hiddenLayers[0].neurons.size()));
+    }
 }
 
 float Network::FeedForward(std::vector<float> inputs)
 {
+    OldZeta.clear();
+    for (size_t i = 0; i < 100; i++)
+    {
+        OldZeta.push_back(std::vector<float>(hiddenLayers[0].neurons.size()));
+    }
+    incrementalDepth = 0;
+
     assert(inputs.size() == inputNeurons);
 
     for (size_t i = 0; i < hiddenLayers.size(); i++)
@@ -172,13 +184,14 @@ float Network::FeedForward(std::vector<float> inputs)
 void Network::ApplyDelta(std::vector<deltaPoint>& delta)
 {
     assert(hiddenLayers.size() > 0);
-    hiddenLayers[0].ApplyDelta(delta, 1);
+    OldZeta[incrementalDepth++] = hiddenLayers[0].zeta;
+    hiddenLayers[0].ApplyDelta(delta);
 }
 
-void Network::ApplyInverseDelta(std::vector<deltaPoint>& delta)
+void Network::ApplyInverseDelta()
 {
     assert(hiddenLayers.size() > 0);
-    hiddenLayers[0].ApplyDelta(delta, -1);
+    hiddenLayers[0].zeta = OldZeta[--incrementalDepth];
 }
 
 float Network::QuickEval()

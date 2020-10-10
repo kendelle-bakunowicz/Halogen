@@ -3,6 +3,7 @@
 Position::Position() : net(InitNetwork())
 {
 	key = EMPTY;
+	delta.reserve(4); //1 for turn change, 2 for to and from square and then 1 extra if there is a capture. Promotions or castle moves use more but thats ok
 }
 
 Position::~Position()
@@ -89,8 +90,7 @@ void Position::ApplyMove(Move move)
 	NextTurn();
 	UpdateCastleRights(move);
 	IncrementZobristKey(move);
-	PreviousDeltas.push_back(CalculateMoveDelta(move));
-	net.ApplyDelta(PreviousDeltas.back());
+	net.ApplyDelta(CalculateMoveDelta(move));
 
 	/*if (GenerateZobristKey() != key)
 	{
@@ -160,19 +160,18 @@ void Position::ApplyMove(std::string strmove)
 	}
 
 	ApplyMove(Move(prev, next, flag));
+	net.FeedForward(GetInputLayer());
 }
 
 void Position::RevertMove()
 {
 	assert(PreviousKeys.size() > 0);
-	assert(PreviousDeltas.size() > 0);
 
 	RestorePreviousBoard();
 	RestorePreviousParamiters();
 	key = PreviousKeys.back();
 	PreviousKeys.pop_back();
-	net.ApplyInverseDelta(PreviousDeltas.back());
-	PreviousDeltas.pop_back();
+	net.ApplyInverseDelta();
 }
 
 void Position::ApplyNullMove()
@@ -185,8 +184,7 @@ void Position::ApplyNullMove()
 
 	NextTurn();
 	IncrementZobristKey(Move());
-	PreviousDeltas.push_back(CalculateMoveDelta(Move()));
-	net.ApplyDelta(PreviousDeltas.back());
+	net.ApplyDelta(CalculateMoveDelta(Move()));
 
 	/*if (GenerateZobristKey() != key)
 	{
@@ -198,13 +196,11 @@ void Position::ApplyNullMove()
 void Position::RevertNullMove()
 {
 	assert(PreviousKeys.size() > 0);
-	assert(PreviousDeltas.size() > 0);
 
 	RestorePreviousParamiters();
 	key = PreviousKeys.back();
 	PreviousKeys.pop_back();
-	net.ApplyInverseDelta(PreviousDeltas.back());
-	PreviousDeltas.pop_back();
+	net.ApplyInverseDelta();
 }
 
 void Position::Print() const
@@ -301,7 +297,6 @@ uint64_t Position::GetZobristKey() const
 void Position::Reset()
 {
 	PreviousKeys.clear();
-	PreviousDeltas.clear();
 	key = EMPTY;
 	EvaluatedPositions = 0;
 
@@ -442,70 +437,68 @@ std::vector<float> Position::GetInputLayer() const
 	return ret;
 }
 
-std::vector<deltaPoint> Position::CalculateMoveDelta(Move move)
+std::vector<deltaPoint>& Position::CalculateMoveDelta(Move move)
 {
+	delta.clear();
 	const BoardParamiterData prev = GetPreviousParamiters();
 
-	std::vector<deltaPoint> ret;
-	ret.reserve(4);	//1 for turn change, 2 for to and from square and then 1 extra if there is a capture. Promotions or castle moves use more but thats ok
-
 	//Change of turn
-	ret.push_back({ modifier(12 * 64), (GetTurn() * 2 - 1) });	//+1 if its now whites turn and -1 if its now blacks turn
+	delta.push_back({ modifier(12 * 64), (GetTurn() * 2 - 1) });	//+1 if its now whites turn and -1 if its now blacks turn
 
-	if (move.IsUninitialized()) return ret;		//null move
+	if (move.IsUninitialized()) return delta;		//null move
 
 	if (!move.IsPromotion())
 	{
-		ret.push_back({ modifier(GetSquare(move.GetTo()) * 64 + move.GetFrom()), -1 });				//toggle the square we left
-		ret.push_back({ modifier(GetSquare(move.GetTo()) * 64 + move.GetTo()), 1 });				//toggle the arriving square
+		delta.push_back({ modifier(GetSquare(move.GetTo()) * 64 + move.GetFrom()), -1 });				//toggle the square we left
+		delta.push_back({ modifier(GetSquare(move.GetTo()) * 64 + move.GetTo()), 1 });				//toggle the arriving square
 	}
 
 	//En Passant
 	if (move.GetFlag() == EN_PASSANT)
-		ret.push_back({ modifier(Piece(PAWN, GetTurn()) * 64 + GetPosition(GetFile(move.GetTo()), GetRank(move.GetFrom()))), -1 });	//remove the captured piece
+		delta.push_back({ modifier(Piece(PAWN, GetTurn()) * 64 + GetPosition(GetFile(move.GetTo()), GetRank(move.GetFrom()))), -1 });	//remove the captured piece
 
 	//Captures
 	if ((move.IsCapture()) && (move.GetFlag() != EN_PASSANT))
-		ret.push_back({ modifier(GetPreviousBoard().GetSquare(move.GetTo()) * 64 + move.GetTo()), -1 });
+		delta.push_back({ modifier(GetPreviousBoard().GetSquare(move.GetTo()) * 64 + move.GetTo()), -1 });
 
 	//Castling
 	if (CanCastleWhiteKingside() != prev.CanCastleWhiteKingside())					//if casteling rights changed (we can only lose casteling rights when doing a move)
-		ret.push_back({ modifier(12 * 64 + 1), -1 });
+		delta.push_back({ modifier(12 * 64 + 1), -1 });
 	if (CanCastleWhiteQueenside() != prev.CanCastleWhiteQueenside())
-		ret.push_back({ modifier(12 * 64 + 2), -1 });
+		delta.push_back({ modifier(12 * 64 + 2), -1 });
 	if (CanCastleBlackKingside() != prev.CanCastleBlackKingside())
-		ret.push_back({ modifier(12 * 64 + 3), -1 });
+		delta.push_back({ modifier(12 * 64 + 3), -1 });
 	if (CanCastleBlackQueenside() != prev.CanCastleBlackQueenside())
-		ret.push_back({ modifier(12 * 64 + 4), -1 });
+		delta.push_back({ modifier(12 * 64 + 4), -1 });
 
 	if (move.GetFlag() == KING_CASTLE)
 	{
-		ret.push_back({ modifier(GetSquare(GetPosition(FILE_F, GetRank(move.GetFrom()))) * 64 + GetPosition(FILE_H, GetRank(move.GetFrom()))), -1 });
-		ret.push_back({ modifier(GetSquare(GetPosition(FILE_F, GetRank(move.GetFrom()))) * 64 + GetPosition(FILE_F, GetRank(move.GetFrom()))), 1 });
+		delta.push_back({ modifier(GetSquare(GetPosition(FILE_F, GetRank(move.GetFrom()))) * 64 + GetPosition(FILE_H, GetRank(move.GetFrom()))), -1 });
+		delta.push_back({ modifier(GetSquare(GetPosition(FILE_F, GetRank(move.GetFrom()))) * 64 + GetPosition(FILE_F, GetRank(move.GetFrom()))), 1 });
 	}
 
 	if (move.GetFlag() == QUEEN_CASTLE)
 	{
-		ret.push_back({ modifier(GetSquare(GetPosition(FILE_D, GetRank(move.GetFrom()))) * 64 + GetPosition(FILE_A, GetRank(move.GetFrom()))), -1 });
-		ret.push_back({ modifier(GetSquare(GetPosition(FILE_D, GetRank(move.GetFrom()))) * 64 + GetPosition(FILE_D, GetRank(move.GetFrom()))), 1 });
+		delta.push_back({ modifier(GetSquare(GetPosition(FILE_D, GetRank(move.GetFrom()))) * 64 + GetPosition(FILE_A, GetRank(move.GetFrom()))), -1 });
+		delta.push_back({ modifier(GetSquare(GetPosition(FILE_D, GetRank(move.GetFrom()))) * 64 + GetPosition(FILE_D, GetRank(move.GetFrom()))), 1 });
 	}
 
 	//Promotions
 	if (move.IsPromotion())
 	{
-		ret.push_back({ modifier(Piece(PAWN, !GetTurn()) * 64 + move.GetFrom()), -1 });
+		delta.push_back({ modifier(Piece(PAWN, !GetTurn()) * 64 + move.GetFrom()), -1 });
 
 		if (move.GetFlag() == KNIGHT_PROMOTION || move.GetFlag() == KNIGHT_PROMOTION_CAPTURE)
-			ret.push_back({ modifier(Piece(KNIGHT, !GetTurn()) * 64 + move.GetTo()), 1 });
+			delta.push_back({ modifier(Piece(KNIGHT, !GetTurn()) * 64 + move.GetTo()), 1 });
 		if (move.GetFlag() == BISHOP_PROMOTION || move.GetFlag() == BISHOP_PROMOTION_CAPTURE)
-			ret.push_back({ modifier(Piece(BISHOP, !GetTurn()) * 64 + move.GetTo()), 1 });
+			delta.push_back({ modifier(Piece(BISHOP, !GetTurn()) * 64 + move.GetTo()), 1 });
 		if (move.GetFlag() == ROOK_PROMOTION || move.GetFlag() == ROOK_PROMOTION_CAPTURE)
-			ret.push_back({ modifier(Piece(ROOK, !GetTurn()) * 64 + move.GetTo()), 1 });
+			delta.push_back({ modifier(Piece(ROOK, !GetTurn()) * 64 + move.GetTo()), 1 });
 		if (move.GetFlag() == QUEEN_PROMOTION || move.GetFlag() == QUEEN_PROMOTION_CAPTURE)
-			ret.push_back({ modifier(Piece(QUEEN, !GetTurn()) * 64 + move.GetTo()), 1 });
+			delta.push_back({ modifier(Piece(QUEEN, !GetTurn()) * 64 + move.GetTo()), 1 });
 	}
 
-	return ret;
+	return delta;
 }
 
 size_t Position::modifier(size_t index)
@@ -539,13 +532,5 @@ void Position::RevertSEECapture()
 
 float Position::GetEvaluation()
 {
-	//if (abs(net.QuickEval() - net.FeedForward(GetInputLayer())) > 0.001)
-	//	std::cout << "ERROR!";
-
-	EvaluatedPositions++;
-
-	if (EvaluatedPositions % 1024 == 0)
-		return net.FeedForward(GetInputLayer());
-	else 
-		return net.QuickEval();
+	return net.QuickEval();
 }

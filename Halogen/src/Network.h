@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <sstream>
 #include <cstring>
+#include "EvalCache.h"
 
 #define INPUT_NEURONS 12 * 64 - 32 + 1 + 4
 
@@ -42,7 +43,7 @@ struct HiddenLayer
     std::vector<float> FeedForward(std::vector<float>& input, bool UseReLU);
 
     std::vector<Neuron> neurons;
-    void ApplyDelta(std::vector<deltaPoint>& deltaVec, float forward);            //incrementally update the connections between input layer and first hidden layer
+    void ApplyDelta(std::vector<deltaPoint>& deltaVec);            //incrementally update the connections between input layer and first hidden layer
 
     std::vector<float> zeta;
 
@@ -56,7 +57,7 @@ struct Network
     float FeedForward(std::vector<float> inputs);
 
     void ApplyDelta(std::vector<deltaPoint>& delta);            //incrementally update the connections between input layer and first hidden layer
-    void ApplyInverseDelta(std::vector<deltaPoint>& delta);     //for un-make moves
+    void ApplyInverseDelta();     //for un-make moves
     float QuickEval();                                                         //when used with above, this just calculates starting from the alpha of first hidden layer and skips input -> hidden
 
 private:
@@ -66,6 +67,9 @@ private:
     Neuron outputNeuron;
 
     float zeta;
+
+    std::vector<std::vector<float>> OldZeta;
+    size_t incrementalDepth = 0;
 };
 
 Network InitNetwork();
