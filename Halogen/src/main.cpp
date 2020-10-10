@@ -30,7 +30,6 @@ int main(int argc, char* argv[])
 	string Line;					//to read the command given by the GUI
 	cout.setf(ios::unitbuf);		// Make sure that the outputs are sent straight away to the GUI
 
-	//EvaluateDebug();				//uncomment for debug purposes. Must be run in debug mode to work
 	//PerftSuite();
 
 	tTable.SetSize(1);
@@ -65,7 +64,6 @@ int main(int argc, char* argv[])
 		else if (token == "ucinewgame")
 		{
 			position.StartingPosition();
-			//pawnHashTable.ResetTable();
 			tTable.ResetTable();
 		}
 
@@ -154,7 +152,6 @@ int main(int argc, char* argv[])
 				iss >> token;
 				if (token == "Hash") 
 				{
-					//pawnHashTable.ResetTable();
 					tTable.ResetTable();
 				}
 			}
@@ -172,8 +169,7 @@ int main(int argc, char* argv[])
 					cout << "info string Hash size too large" << endl;
 				else
 				{
-					tTable.SetSize(stoi(token) - 1);
-					//pawnHashTable.Init(1);
+					tTable.SetSize(stoi(token));
 				}
 			}
 
