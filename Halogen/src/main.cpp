@@ -547,10 +547,16 @@ void RLPlayGame(int startingSide, Position& pos1, Position& pos2, int  Score[3])
 			break;
 		}
 
-		if (move >= 150)
+		/*if (move >= 150)
 		{
 			Score[1]++;
 			break;
+		}*/
+
+		if (move % 250 == 0)
+		{
+			pos1.net.FeedForward(pos1.GetInputLayer());
+			pos2.net.FeedForward(pos2.GetInputLayer());
 		}
 
 		if (result.GetMove().IsUninitialized())
