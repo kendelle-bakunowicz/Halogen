@@ -436,6 +436,8 @@ int ProcessDataForPyTorch()
 			}
 		}
 
+		printf("%d ", (position.GetTurn()));
+
 		// Find the result { W, L, D } => { 1.0, 0.0, 0.5 }
 		if (strstr(line, "[1.0]")) printf("1.0");
 		else if (strstr(line, "[0.0]")) printf("0.0");
