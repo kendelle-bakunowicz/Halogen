@@ -1,10 +1,7 @@
 #pragma once
 
-#include "TranspositionTable.h"
-#include "Position.h"
-#include "MoveGeneration.h"
+#include "MovePicker.h"
 #include "Zobrist.h"
-#include "Move.h"
 #include "TimeManage.h"
 #include "tbprobe.h"
 #include <ctime>
@@ -34,11 +31,6 @@ enum Score
 
 	MateScore = -10000,
 	Draw = 0
-};
-
-struct Killer
-{
-	Move move[2];
 };
 
 struct SearchData
@@ -83,8 +75,6 @@ private:
 
 	std::vector<unsigned int> searchDepth;					//what depth is each thread currently searching?
 };
-
-extern TranspositionTable tTable;
 
 Move MultithreadedSearch(const Position& position, int allowedTimeMs, unsigned int threadCount = 1, int maxSearchDepth = MAX_DEPTH);
 uint64_t BenchSearch(const Position& position, int maxSearchDepth = MAX_DEPTH);

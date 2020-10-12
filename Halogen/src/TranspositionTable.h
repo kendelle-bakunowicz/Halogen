@@ -33,6 +33,8 @@ private:
 	uint64_t TTHits;
 };
 
+extern TranspositionTable tTable;
+
 bool CheckEntry(const TTEntry& entry, uint64_t key, int depth);
 bool CheckEntry(const TTEntry& entry, uint64_t key);
 

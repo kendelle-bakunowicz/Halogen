@@ -4,9 +4,6 @@ const std::vector<int> FutilityMargins = { 100, 150, 250, 400, 600 };
 const unsigned int R = 3;					//Null-move reduction depth
 const unsigned int VariableNullDepth = 7;	//Beyond this depth R = 4
 
-TranspositionTable tTable;
-
-void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRoot, SearchData& locals);
 void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int score, int alpha, int beta, const Position& position, const Move& move, const SearchData& locals, const ThreadSharedData& sharedData);
 void PrintBestMove(Move Best);
 bool UseTransposition(TTEntry& entry, int distanceFromRoot, int alpha, int beta);
@@ -21,7 +18,6 @@ void UpdateBounds(const TTEntry& entry, int& alpha, int& beta);
 int TerminalScore(const Position& position, int distanceFromRoot);
 int extension(Position & position, const Move& move, int alpha, int beta);
 Move GetHashMove(const Position& position, int depthRemaining, int distanceFromRoot);
-Move GetHashMove(const Position& position, int distanceFromRoot);
 void AddKiller(Move move, int distanceFromRoot, std::vector<Killer>& KillerMoves);
 void AddHistory(const Move& move, int depthRemaining, unsigned int (&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES], bool sideToMove);
 void UpdatePV(Move move, int distanceFromRoot, std::vector<std::vector<Move>>& PvTable);
@@ -35,12 +31,9 @@ SearchResult UseRootTBScore(unsigned int result, int staticEval);
 
 Move SearchPosition(Position position, int allowedTimeMs, uint64_t& totalNodes, ThreadSharedData& sharedData, unsigned int threadID, int maxSearchDepth = MAX_DEPTH, SearchData locals = SearchData());
 SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthRemaining, int alpha, int beta, int colour, unsigned int distanceFromRoot, bool allowedNull, SearchData& locals, ThreadSharedData& sharedData);
-void UpdateAlpha(int Score, int& a, std::vector<Move>& moves, const size_t& i, unsigned int distanceFromRoot, SearchData& locals);
-void UpdateScore(int newScore, int& Score, Move& bestMove, std::vector<Move>& moves, const size_t& i);
+void UpdateAlpha(int Score, int& a, const Move& move, unsigned int distanceFromRoot, SearchData& locals);
+void UpdateScore(int newScore, int& Score, Move& bestMove, const Move& move);
 SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha, int beta, int colour, unsigned int distanceFromRoot, int depthRemaining, SearchData& locals, ThreadSharedData& sharedData);
-
-int see(Position& position, int square, bool side);
-int seeCapture(Position& position, const Move& move); //Don't send this an en passant move!
 
 void InitSearch();
 
@@ -82,127 +75,6 @@ void InitSearch()
 {
 	KeepSearching = true;
 	tTable.ResetHitCount();
-}
-
-void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRoot, SearchData& locals)
-{
-	/*
-	We want to order the moves such that the best moves are more likely to be further towards the front.
-
-	The order is as follows:
-
-	1. Hash move												= 10m
-	2. Queen Promotions											= 9m
-	3. Winning captures											= +8m
-	4. Killer moves												= ~7m
-	5. Losing captures											= -6m
-	6. Quiet moves (further sorted by history matrix values)	= 0-1m
-	7. Underpromotions											= -1
-
-	Note that typically the maximum value of the history matrix does not exceed 1,000,000 after a minute
-	and as such we choose 1m to be the maximum allowed value
-
-	*/
-
-	Move TTmove = GetHashMove(position, distanceFromRoot);
-
-	for (size_t i = 0; i < moves.size(); i++)
-	{
-		//Hash move
-		if (moves[i] == TTmove)
-		{
-			moves[i].orderScore = 10000000;
-		}
-
-		//Promotions
-		else if (moves[i].IsPromotion()) 
-		{
-			if (moves[i].GetFlag() == QUEEN_PROMOTION || moves[i].GetFlag() == QUEEN_PROMOTION_CAPTURE)
-			{
-				moves[i].orderScore = 9000000;
-			}
-			else
-			{
-				moves[i].orderScore = -1;
-			}
-		}
-
-		//Captures
-		else if (moves[i].IsCapture())
-		{
-			int SEE = 0;
-
-			if (moves[i].GetFlag() != EN_PASSANT)
-			{
-				SEE = seeCapture(position, moves[i]);
-			}
-
-			if (SEE >= 0)
-			{
-				moves[i].orderScore = 8000000 + SEE;
-			}
-
-			if (SEE < 0)
-			{
-				moves[i].orderScore = 6000000 + SEE;
-			}
-		}
-
-		//Killers
-		else if (moves[i] == locals.KillerMoves.at(distanceFromRoot).move[0])
-		{
-			moves[i].orderScore = 7500000;
-		}
-
-		else if (moves[i] == locals.KillerMoves.at(distanceFromRoot).move[1])
-		{
-			moves[i].orderScore = 6500000;
-		}
-
-		//Quiet
-		else
-		{
-			moves[i].orderScore = std::min(1000000U, locals.HistoryMatrix[position.GetTurn()][moves[i].GetFrom()][moves[i].GetTo()]);
-		}
-	}
-
-	std::stable_sort(moves.begin(), moves.end(), [](const Move& a, const Move& b)
-		{
-			return a.orderScore > b.orderScore;
-		});
-}
-
-int see(Position& position, int square, bool side)
-{
-	int value = 0;
-	Move capture = GetSmallestAttackerMove(position, square, side);
-	
-	if (!capture.IsUninitialized())
-	{
-		int captureValue = PieceValues(position.GetSquare(capture.GetTo()));
-
-		position.ApplySEECapture(capture);
-		value = std::max(0, captureValue - see(position, square, !side));	// Do not consider captures if they lose material, therefor max zero 
-		position.RevertSEECapture();
-	}
-
-	return value;
-}
-
-int seeCapture(Position& position, const Move& move)
-{
-	assert(move.GetFlag() == CAPTURE);	//Don't seeCapture with promotions or en_passant!
-
-	bool side = position.GetTurn();
-
-	int value = 0;
-	int captureValue = PieceValues(position.GetSquare(move.GetTo()));
-
-	position.ApplySEECapture(move);
-	value = captureValue - see(position, move.GetTo(), !side);
-	position.RevertSEECapture();
-
-	return value;
 }
 
 
@@ -427,82 +299,35 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		return alpha;
 
 	Move bestMove = Move();	//used for adding to transposition table later
+	Move hashMove;
 	int Score = LowINF;
 	int a = alpha;
 	int b = beta;
-
-	/*If a hash move exists, search with that move first and hope we can get a cutoff*/
-	Move hashMove = GetHashMove(position, distanceFromRoot);
-	if (!hashMove.IsUninitialized() && position.GetFiftyMoveCount() < 100 && MoveIsLegal(position, hashMove))	//if its 50 move rule we need to skip this and figure out if its checkmate or draw below
-	{
-		position.ApplyMove(hashMove);
-		sharedData.AddNode();
-		tTable.PreFetch(position.GetZobristKey());							//load the transposition into l1 cache. ~5% speedup
-		int extendedDepth = depthRemaining + extension(position, hashMove, alpha, beta);
-		int newScore = -NegaScout(position, initialDepth, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true, locals, sharedData).GetScore();
-		position.RevertMove();
-
-		if (newScore > Score)
-		{
-			Score = newScore;
-			bestMove = hashMove;
-		}
-
-		if (Score > a)
-		{
-			a = Score;
-			UpdatePV(hashMove, distanceFromRoot, locals.PvTable);
-		}
-
-		if (a >= beta) //Fail high cutoff
-		{
-			AddKiller(hashMove, distanceFromRoot, locals.KillerMoves);
-			AddHistory(hashMove, depthRemaining, locals.HistoryMatrix, position.GetTurn());
-
-			if (!locals.timeManage.AbortSearch(sharedData.getNodes()) && !(sharedData.ThreadAbort(initialDepth)))
-				AddScoreToTable(Score, alpha, position, depthRemaining, distanceFromRoot, beta, bestMove);
-
-			return SearchResult(Score, bestMove);
-		}
-
-		b = a + 1;				//Set a new zero width window
-	}
-
-	std::vector<Move> moves;
-	LegalMoves(position, moves);
-
-	if (moves.size() == 0)
-	{
-		return TerminalScore(position, distanceFromRoot);
-	}
-
-	if (position.GetFiftyMoveCount() >= 100) return 0;	//must make sure its not already checkmate
-	
-	OrderMoves(moves, position, distanceFromRoot, locals);
 	bool InCheck = IsInCheck(position);
 
+	GetHashMove(position, distanceFromRoot, hashMove);
 	if (hashMove.IsUninitialized() && depthRemaining > 3)
 		depthRemaining--;
 
 	bool FutileNode = (depthRemaining < static_cast<int>(FutilityMargins.size()) && staticScore + FutilityMargins.at(std::max<int>(0, depthRemaining)) < a);
 
-	for (size_t i = 0; i < moves.size(); i++)	
-	{
-		if (moves[i] == hashMove)
-			continue;
+	Move move;
+	MovePicker generator(distanceFromRoot);
 
-		position.ApplyMove(moves.at(i));
+	for (size_t i = 0; generator.Next(position, move, locals.KillerMoves, locals.HistoryMatrix); i++)	
+	{
+		position.ApplyMove(move);
 		sharedData.AddNode();
 		tTable.PreFetch(position.GetZobristKey());							//load the transposition into l1 cache. ~5% speedup
 
 		//futility pruning
-		if (IsFutile(moves[i], beta, alpha, InCheck, position) && i > 0 && FutileNode)	//Possibly stop futility pruning if alpha or beta are close to mate scores
+		if (IsFutile(move, beta, alpha, InCheck, position) && i > 0 && FutileNode)	//Possibly stop futility pruning if alpha or beta are close to mate scores
 		{
 			position.RevertMove();
 			continue;
 		}
 
-		int extendedDepth = depthRemaining + extension(position, moves[i], alpha, beta);
+		int extendedDepth = depthRemaining + extension(position, move, alpha, beta);
 
 		//late move reductions
 		if (LMR(InCheck, position, depthRemaining) && i > 3)
@@ -525,19 +350,25 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 
 		position.RevertMove();
 
-		UpdateScore(newScore, Score, bestMove, moves, i);
-		UpdateAlpha(Score, a, moves, i, distanceFromRoot, locals);
+		UpdateScore(newScore, Score, bestMove, move);
+		UpdateAlpha(Score, a, move, distanceFromRoot, locals);
 
 		if (a >= beta) //Fail high cutoff
 		{
-			AddKiller(moves.at(i), distanceFromRoot, locals.KillerMoves);
-			AddHistory(moves[i], depthRemaining, locals.HistoryMatrix, position.GetTurn());
+			AddKiller(move, distanceFromRoot, locals.KillerMoves);
+			AddHistory(move, depthRemaining, locals.HistoryMatrix, position.GetTurn());
 			break;
 		}
 
 		b = a + 1;				//Set a new zero width window
 	}
 
+	if (Score == LowINF)
+	{
+		return TerminalScore(position, distanceFromRoot);
+	}
+	if (position.GetFiftyMoveCount() >= 100) return 0;	//must make sure its not already checkmate
+	
 	if (!locals.timeManage.AbortSearch(sharedData.getNodes()) && !sharedData.ThreadAbort(initialDepth))
 		AddScoreToTable(Score, alpha, position, depthRemaining, distanceFromRoot, beta, bestMove);
 
@@ -632,21 +463,21 @@ SearchResult UseRootTBScore(unsigned int result, int staticEval)
 	return { score, move };
 }
 
-void UpdateAlpha(int Score, int& a, std::vector<Move>& moves, const size_t& i, unsigned int distanceFromRoot, SearchData& locals)
+void UpdateAlpha(int Score, int& a, const Move& move, unsigned int distanceFromRoot, SearchData& locals)
 {
 	if (Score > a)
 	{
 		a = Score;
-		UpdatePV(moves.at(i), distanceFromRoot, locals.PvTable);
+		UpdatePV(move, distanceFromRoot, locals.PvTable);
 	}
 }
 
-void UpdateScore(int newScore, int& Score, Move& bestMove, std::vector<Move>& moves, const size_t& i)
+void UpdateScore(int newScore, int& Score, Move& bestMove, const Move& move)
 {
 	if (newScore > Score)
 	{
 		Score = newScore;
-		bestMove = moves.at(i);
+		bestMove = move;
 	}
 }
 
@@ -823,19 +654,16 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 	if (sharedData.ThreadAbort(initialDepth)) return -1;									//another thread has finished searching this depth: ABORT!
 	if (distanceFromRoot >= MAX_DEPTH) return 0;								//If we are 100 moves from root I think we can assume its a drawn position
 
-	std::vector<Move> moves;
-
 	/*Check for checkmate*/
 	if (IsInCheck(position))
 	{
+		std::vector<Move> moves;
 		LegalMoves(position, moves);
 
 		if (moves.size() == 0)
 		{
 			return TerminalScore(position, distanceFromRoot);
 		}
-
-		moves.clear();
 	}
 
 	int staticScore = colour * EvaluatePositionNet(position, locals.evalTable);
@@ -844,23 +672,19 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 	
 	Move bestmove;
 	int Score = staticScore;
-
-	QuiescenceMoves(position, moves);
-
-	if (moves.size() == 0)
-		return staticScore;
 		
-	OrderMoves(moves, position, distanceFromRoot, locals);
+	Move move;
+	MovePicker generator(distanceFromRoot, true);
 
-	for (size_t i = 0; i < moves.size(); i++)
+	for (size_t i = 0; generator.Next(position, move, locals.KillerMoves, locals.HistoryMatrix); i++)
 	{
 		int SEE = 0;
-		if (moves[i].GetFlag() == CAPTURE) //seeCapture doesn't work for ep or promotions
+		if (move.GetFlag() == CAPTURE) //seeCapture doesn't work for ep or promotions
 		{
-			SEE = seeCapture(position, moves[i]);
+			SEE = seeCapture(position, move);
 		}
 
-		if (moves[i].IsPromotion())
+		if (move.IsPromotion())
 		{
 			SEE += PieceValues(WHITE_QUEEN);
 		}
@@ -871,27 +695,27 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 		if (SEE < 0)														//prune bad captures
 			break;
 
-		if (SEE <= 0 && position.GetCaptureSquare() != moves[i].GetTo())	//prune equal captures that aren't recaptures
+		if (SEE <= 0 && position.GetCaptureSquare() != move.GetTo())	//prune equal captures that aren't recaptures
 			continue;
 
-		if (moves[i].IsPromotion() && !(moves[i].GetFlag() == QUEEN_PROMOTION || moves[i].GetFlag() == QUEEN_PROMOTION_CAPTURE))	//prune underpromotions
+		if (move.IsPromotion() && !(move.GetFlag() == QUEEN_PROMOTION || move.GetFlag() == QUEEN_PROMOTION_CAPTURE))	//prune underpromotions
 			continue;
 
-		position.ApplyMove(moves.at(i));
+		position.ApplyMove(move);
 		sharedData.AddNode();
 		int newScore = -Quiescence(position, initialDepth, -beta, -alpha, -colour, distanceFromRoot + 1, depthRemaining - 1, locals, sharedData).GetScore();
 		position.RevertMove();
 
 		if (newScore > Score)
 		{
-			bestmove = moves.at(i);
+			bestmove = move;
 			Score = newScore;
 		}
 
 		if (Score > alpha)
 		{
 			alpha = Score;
-			UpdatePV(moves.at(i), distanceFromRoot, locals.PvTable);
+			UpdatePV(move, distanceFromRoot, locals.PvTable);
 		}
 
 		if (Score >= beta)
@@ -929,19 +753,6 @@ Move GetHashMove(const Position& position, int depthRemaining, int distanceFromR
 	TTEntry hash = tTable.GetEntry(position.GetZobristKey());
 
 	if (CheckEntry(hash, position.GetZobristKey(), depthRemaining))
-	{
-		tTable.SetNonAncient(position.GetZobristKey(), position.GetTurnCount(), distanceFromRoot);
-		return hash.GetMove();
-	}
-
-	return {};
-}
-
-Move GetHashMove(const Position& position, int distanceFromRoot)
-{
-	TTEntry hash = tTable.GetEntry(position.GetZobristKey());
-
-	if (CheckEntry(hash, position.GetZobristKey()))
 	{
 		tTable.SetNonAncient(position.GetZobristKey(), position.GetTurnCount(), distanceFromRoot);
 		return hash.GetMove();
