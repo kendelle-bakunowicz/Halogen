@@ -34,11 +34,15 @@ public:
 
 	void StartSearch(int maxTime, int allocatedTime);	//pass the allowed search time maximum in milliseconds
 
+	void BestMoveIsRecapture(bool recapture);
+
 private:
 	Timer timer;
 	int AllocatedSearchTimeMS;
 	int MaxTimeMS;
 
 	bool CacheShouldStop = false;
+
+	bool Recapture = false;
 };
 

@@ -45,7 +45,10 @@ SearchTimeManage::~SearchTimeManage()
 
 bool SearchTimeManage::ContinueSearch()
 {
-	return (timer.ElapsedMs() < AllocatedSearchTimeMS / 2);
+	if (Recapture)
+		return (timer.ElapsedMs() < AllocatedSearchTimeMS / 4);
+	else 
+		return (timer.ElapsedMs() < AllocatedSearchTimeMS / 2);
 }
 
 bool SearchTimeManage::AbortSearch(uint64_t nodes)
@@ -62,4 +65,9 @@ void SearchTimeManage::StartSearch(int maxTime, int allocatedTime)
 	AllocatedSearchTimeMS = allocatedTime;
 	MaxTimeMS = maxTime;
 	timer.Start();
+}
+
+void SearchTimeManage::BestMoveIsRecapture(bool recapture)
+{
+	Recapture = recapture;
 }

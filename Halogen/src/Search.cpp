@@ -1002,6 +1002,8 @@ void ThreadSharedData::ReportResult(unsigned int depth, double Time, int score, 
 		threadDepthCompleted = depth;
 		currentBestMove = move;
 		prevScore = score;
+
+		//timeManage.BestMoveIsRecapture(position.GetCaptureSquare() == move.GetTo());
 	}
 }
 
