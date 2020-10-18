@@ -45,7 +45,7 @@ SearchTimeManage::~SearchTimeManage()
 
 bool SearchTimeManage::ContinueSearch()
 {
-	return (timer.ElapsedMs() < AllocatedSearchTimeMS / 2);
+	return (timer.ElapsedMs() < (AllocatedSearchTimeMS * unstableMultiplier) / 2);
 }
 
 bool SearchTimeManage::AbortSearch(uint64_t nodes)
@@ -62,4 +62,13 @@ void SearchTimeManage::StartSearch(int maxTime, int allocatedTime)
 	AllocatedSearchTimeMS = allocatedTime;
 	MaxTimeMS = maxTime;
 	timer.Start();
+}
+
+void SearchTimeManage::UnstableBestMove(bool bestMoveChanged)
+{
+	//decay back to the default value
+	unstableMultiplier -= (unstableMultiplier - DefaultUnstableMultiplier) * UnstableMultiplierDecay;
+
+	if (bestMoveChanged)
+		unstableMultiplier *= UnstableMultiplierBonus;
 }
