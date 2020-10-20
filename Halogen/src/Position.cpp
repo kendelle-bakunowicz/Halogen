@@ -433,9 +433,8 @@ std::vector<float> Position::GetInputLayer() const
 
 std::vector<deltaPoint>& Position::CalculateMoveDelta(Move move)
 {
-	if (move.IsUninitialized()) return delta;		//null move
-
 	delta.clear();
+	if (move.IsUninitialized()) return delta;		//null move
 
 	if (!move.IsPromotion())
 	{
