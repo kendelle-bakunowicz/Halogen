@@ -126,9 +126,9 @@ int main(int argc, char* argv[])
 				{
 
 					if (position.GetTurn() == WHITE)
-						movetime = wtime / 16 + winc;
+						movetime = wtime / 14 + winc;
 					else
-						movetime = btime / 16 + binc;
+						movetime = btime / 14 + binc;
 				}
 				else
 				{
