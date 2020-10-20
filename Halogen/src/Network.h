@@ -12,7 +12,7 @@
 #include <cstring>
 #include "EvalCache.h"
 
-#define INPUT_NEURONS 12 * 64 - 32
+#define INPUT_NEURONS 12 * 64
 
 struct trainingPoint
 {
