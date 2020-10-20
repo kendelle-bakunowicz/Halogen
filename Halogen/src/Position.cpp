@@ -436,7 +436,6 @@ std::vector<float> Position::GetInputLayer() const
 std::vector<deltaPoint>& Position::CalculateMoveDelta(Move move)
 {
 	delta.clear();
-	const BoardParamiterData prev = GetPreviousParamiters();
 
 	//Change of turn
 	delta.push_back({ modifier(12 * 64), (GetTurn() * 2 - 1) });	//+1 if its now whites turn and -1 if its now blacks turn
