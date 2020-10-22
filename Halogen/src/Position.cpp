@@ -294,6 +294,30 @@ uint64_t Position::GetZobristKey() const
 	return key;
 }
 
+uint64_t Position::GetSimpleZobristKey() const
+{
+	uint64_t Key = GetZobristKey();
+
+	if (GetTurn() == WHITE)
+		Key ^= ZobristTable.at(12 * 64);
+
+	if (CanCastleWhiteKingside())
+		Key ^= ZobristTable.at(12 * 64 + 1);
+	if (CanCastleWhiteQueenside())
+		Key ^= ZobristTable.at(12 * 64 + 2);
+	if (CanCastleBlackKingside())
+		Key ^= ZobristTable.at(12 * 64 + 3);
+	if (CanCastleBlackQueenside())
+		Key ^= ZobristTable.at(12 * 64 + 4);
+
+	if (GetEnPassant() <= SQ_H8)														//no ep = -1 which wraps around to a very large number
+	{
+		Key ^= ZobristTable.at(12 * 64 + 5 + GetFile(GetEnPassant()));
+	}
+
+	return key;
+}
+
 void Position::Reset()
 {
 	PreviousKeys.clear();

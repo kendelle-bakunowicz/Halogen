@@ -35,6 +35,7 @@ public:
 	bool InitialiseFromFen(std::string fen);
 
 	uint64_t GetZobristKey() const;
+	uint64_t GetSimpleZobristKey() const;
 
 	void Reset();
 

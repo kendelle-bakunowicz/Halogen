@@ -7,10 +7,15 @@ int EvaluatePositionNet(Position& position, EvalCacheTable& evalTable)
 {
     int eval;
 
-    if (!evalTable.GetEntry(position.GetZobristKey(), eval))
+    if (!evalTable.GetEntry(position.GetSimpleZobristKey(), eval))
     {
         eval = static_cast<int>(std::round(position.GetEvaluation()));
-        evalTable.AddEntry(position.GetZobristKey(), eval);
+        evalTable.AddEntry(position.GetSimpleZobristKey(), eval);
+        evalTable.misses++;
+    }
+    else
+    {
+        evalTable.hits++;
     }
 
     return std::min(4000, std::max(-4000, eval));
