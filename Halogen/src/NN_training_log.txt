@@ -1,0 +1,5 @@
+Epochs: 525
+Batch size: 8192
+Learning rate: 0.01
+Training positions: 33554432
+Training error: 0.108250268
