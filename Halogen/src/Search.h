@@ -48,20 +48,20 @@ struct SearchData
 	std::vector<std::vector<Move>> PvTable;
 	std::vector<Killer> KillerMoves;							//2 moves indexed by distanceFromRoot
 	unsigned int HistoryMatrix[N_PLAYERS][N_SQUARES][N_SQUARES];			//first index is from square and 2nd index is to square
-	SearchTimeManage timeManage;
 	EvalCacheTable evalTable;
 };
 
 class ThreadSharedData
 {
 public:
-	ThreadSharedData(unsigned int threads = 1, bool NoOutput = false);
+	ThreadSharedData(unsigned int allocatedTimeMs, unsigned int maxTime, unsigned int threads = 1, bool NoOutput = false);
 	~ThreadSharedData();
 
 	Move GetBestMove();
 	bool ThreadAbort(unsigned int initialDepth) const;
 	void ReportResult(unsigned int depth, double Time, int score, int alpha, int beta, const Position& position, Move move, const SearchData& locals);
 	void ReportDepth(unsigned int depth, unsigned int threadID);
+	void ReportWantsToStop(unsigned int threadID);
 	bool ShouldSkipDepth(unsigned int depth);
 	int GetAspirationScore();
 	void AddTBHit() { tbHits++; }
@@ -69,6 +69,9 @@ public:
 
 	void AddNode() { nodes++; }
 	uint64_t getNodes() const { return nodes; }
+
+	bool AbortSearch();
+	bool ContinueSearch();
 
 private:
 	std::mutex ioMutex;
@@ -78,14 +81,17 @@ private:
 	int prevScore;									//if threads abandon the search, we need to know what the score was in order to set new alpha/beta bounds
 	bool noOutput;									//Do not write anything to the concole
 
+	SearchTimeManage timeManage;
+
 	std::atomic<uint64_t> tbHits;
 	std::atomic<uint64_t> nodes;
 
-	std::vector<unsigned int> searchDepth;					//what depth is each thread currently searching?
+	std::vector<unsigned int> searchDepth;			//what depth is each thread currently searching?
+	std::vector<bool> ThreadWantsToStop;			//Threads signal here that they want to stop searching, but will keep going until all threads want to stop
 };
 
 extern TranspositionTable tTable;
 
-Move MultithreadedSearch(const Position& position, int allowedTimeMs, unsigned int threadCount = 1, int maxSearchDepth = MAX_DEPTH);
+Move MultithreadedSearch(const Position& position, unsigned int maxTimeMs, unsigned int AllocatedTimeMs, unsigned int threadCount = 1, int maxSearchDepth = MAX_DEPTH);
 uint64_t BenchSearch(const Position& position, int maxSearchDepth = MAX_DEPTH);
 

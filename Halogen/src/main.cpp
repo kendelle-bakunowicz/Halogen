@@ -2,7 +2,7 @@
 #include "Search.h"
 #include <thread>
 
-using namespace::std;
+using namespace::std; 
 
 void PerftSuite();
 void PrintVersion();
@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
 				else if (token == "winc")	iss >> winc;
 				else if (token == "binc")	iss >> binc;
 				else if (token == "movetime") iss >> searchTime;
-				else if (token == "infinite") searchTime = 2147483647;
+				else if (token == "infinite") { wtime = 2147483647; btime = 2147483647; }
 				else if (token == "movestogo") iss >> movestogo;
 			}
 
@@ -124,9 +124,9 @@ int main(int argc, char* argv[])
 				{
 
 					if (position.GetTurn() == WHITE)
-						movetime = wtime / 20 + winc;
+						movetime = wtime / 16 + winc;
 					else
-						movetime = btime / 20 + binc;
+						movetime = btime / 16 + binc;
 				}
 				else
 				{
@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
 				}
 			}
 
-			thread searchThread([&] {MultithreadedSearch(position, movetime, ThreadCount); });
+			thread searchThread([&] {MultithreadedSearch(position, position.GetTurn() ? wtime + winc : btime + binc, movetime, ThreadCount); });
 			searchThread.detach();
 			
 		}
@@ -221,7 +221,7 @@ void PrintVersion()
 {
 	cout << "Halogen " << version;
 
-#if defined(_WIN64)
+#if defined(_WIN64) or defined(__x86_64__)
 	cout << " x64";
 
 	#if defined(USE_POPCNT)
