@@ -1,7 +1,7 @@
 #include "Network.h"
 
 static const char* WeightsTXT[] = {
-    #include "epoch1751_b8192_quant.nn"
+    #include "epoch125_quant.nn"
     ""
 };
 
@@ -173,22 +173,18 @@ void Network::RecalculateIncremental(std::array<int16_t, INPUT_NEURONS> inputs)
     }
     incrementalDepth = 0;
 
-    assert(inputs.size() == inputNeurons);
-
     //We never actually use FeedForward to get the evaluaton, only to 'refresh' the incremental updates and so we only need to do connection with first layer
     hiddenLayer.FeedForward(inputs, false);
 }
 
 void Network::ApplyDelta(std::vector<deltaPoint>& delta)
 {
-    assert(hiddenLayers.size() > 0);
     OldZeta[incrementalDepth++] = hiddenLayer.zeta;
     hiddenLayer.ApplyDelta(delta);
 }
 
 void Network::ApplyInverseDelta()
 {
-    assert(hiddenLayers.size() > 0);
     hiddenLayer.zeta = OldZeta[--incrementalDepth];
 }
 
