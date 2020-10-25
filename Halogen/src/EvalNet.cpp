@@ -9,7 +9,7 @@ int EvaluatePositionNet(Position& position, EvalCacheTable& evalTable)
 
     if (!evalTable.GetEntry(position.GetZobristKey(), eval))
     {
-        eval = position.GetEvaluation() * 2;
+        eval = position.GetEvaluation() * 5 / 2;
         evalTable.AddEntry(position.GetZobristKey(), eval);
     }
 
