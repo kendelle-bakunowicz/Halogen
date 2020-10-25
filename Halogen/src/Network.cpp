@@ -1,7 +1,7 @@
 #include "Network.h"
 
 static const char* WeightsTXT[] = {
-    #include "epoch1751_b8192_quant.nn"
+    #include "epoch4600_quant.nn"
     ""
 };
 
@@ -191,5 +191,5 @@ void Network::ApplyInverseDelta()
 int16_t Network::QuickEval()
 {
     std::array<int16_t, HIDDEN_NEURONS> inputs = hiddenLayer.zeta;
-    return (outputNeuron.FeedForward(inputs, true) + HALF_PRECISION) >> PRECISION_SHIFT;
+    return ((outputNeuron.FeedForward(inputs, true) + HALF_PRECISION) * 50) >> PRECISION_SHIFT;    //50 arbitrary scale parameter
 }
