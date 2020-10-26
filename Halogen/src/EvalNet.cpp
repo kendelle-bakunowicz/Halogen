@@ -11,7 +11,7 @@ int EvaluatePositionNet(Position& position, EvalCacheTable& evalTable)
 
     if (!evalTable.GetEntry(position.GetZobristKey(), eval))
     {
-        eval = position.GetEvaluation() * 6 / 5 + (position.GetTurn() == WHITE ? TEMPO : -TEMPO);
+        eval = position.GetEvaluation() * 7 / 5 + (position.GetTurn() == WHITE ? TEMPO : -TEMPO);
         evalTable.AddEntry(position.GetZobristKey(), eval);
     }
 
