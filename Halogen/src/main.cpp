@@ -14,11 +14,13 @@ string version = "8";
 
 void TestSyzygy();
 
+int ProcessDataForPyTorch();
+
 int main(int argc, char* argv[])
 {
 	srand(time(NULL));
 
-	PrintVersion();
+	//PrintVersion();
 	tb_init("<empty>");
 
 	unsigned long long init[4] = { 0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL }, length = 4;
@@ -38,6 +40,9 @@ int main(int argc, char* argv[])
 	Position position;
 
 	unsigned int ThreadCount = 1;
+
+	ProcessDataForPyTorch();
+	return 0;
 
 	if (argc == 2 && strcmp(argv[1], "bench") == 0) { Bench(); return 0; }	//currently only supports bench from command line for openBench integration
 
@@ -383,4 +388,45 @@ void Bench()
 	}
 
 	cout << nodeCount << " nodes " << int(nodeCount / max(timer.ElapsedMs(), 1) * 1000) << " nps" << endl;
+}
+
+int ProcessDataForPyTorch()
+{
+	char line[256];
+	FILE* fin = fopen("D:\\SF_data\\Fishtest_10_per.book", "r");
+
+	Position position;
+
+	for (;;) {
+
+		if (fgets(line, 256, fin) == NULL)
+			return 1;
+
+		position.InitialiseFromFen(line);
+
+		if (IsInCheck(position))
+			continue;
+
+		if (PositionHasWinningCapture(position))
+			continue;
+
+		if (GetBitCount(position.GetAllPieces()) <= 6)
+			continue;
+
+		// Find the result { W, L, D } => { 1.0, 0.0, 0.5 }
+		if (strstr(line, "1-0")) printf("1.0");
+		else if (strstr(line, "0-1")) printf("0.0");
+		else if (strstr(line, "1/2-1/2")) printf("0.5");
+
+		for (int i = 0; i < N_PIECES; i++)
+		{
+			uint64_t bb = position.GetPieceBB(i);
+			while (bb != 0)
+			{
+				printf(" %d", i * 64 + LSPpop(bb));
+			}
+		}
+
+		printf("\n");
+	}
 }

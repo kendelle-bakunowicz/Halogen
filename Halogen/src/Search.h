@@ -93,3 +93,4 @@ Move MultithreadedSearch(const Position& position, unsigned int maxTimeMs, unsig
 uint64_t BenchSearch(const Position& position, int maxSearchDepth = MAX_DEPTH);
 void DepthSearch(const Position& position, int maxSearchDepth);
 
+bool PositionHasWinningCapture(Position& position);

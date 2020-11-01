@@ -213,6 +213,20 @@ int seeCapture(Position& position, const Move& move)
 	return value;
 }
 
+bool PositionHasWinningCapture(Position& position)
+{
+	uint64_t other = position.GetPiecesColour(!position.GetTurn());
+
+	while (other != 0)
+	{
+		int sq = LSPpop(other);
+
+		if (see(position, sq, position.GetTurn()) > 0)
+			return true;
+	}
+
+	return false;
+}
 
 void PrintBestMove(Move Best)
 {

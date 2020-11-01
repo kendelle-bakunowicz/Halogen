@@ -250,8 +250,8 @@ bool Position::InitialiseFromFen(std::vector<std::string> fen)
 	if (!InitialiseParamitersFromFen(fen))
 		return false;
 
-	key = GenerateZobristKey();
-	net.RecalculateIncremental(GetInputLayer());
+	//key = GenerateZobristKey();
+	//net.RecalculateIncremental(GetInputLayer());
 
 	nodesSearched = 0;
 	tbHits = 0;
