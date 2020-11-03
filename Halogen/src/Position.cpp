@@ -422,16 +422,12 @@ std::array<int16_t, INPUT_NEURONS> Position::GetInputLayer() const
 	std::array<int16_t, INPUT_NEURONS> ret;
 	size_t index = 0;
 
-	for (int side = WHITE; side >= BLACK; side--)
+	for (int i = 0; i < N_PIECES; i++)
 	{
-		for (int piece = PAWN; piece <= KING; piece++)
+		uint64_t bb = GetPieceBB(i);
+		for (int sq = 0; sq < N_SQUARES; sq++)
 		{
-			uint64_t bb = GetPieceBB(Piece(piece, side));
-
-			for (int sq = 0; sq < N_SQUARES; sq++)
-			{
-				ret[index++] = ((bb & SquareBB[sq]) != 0) << PRECISION_SHIFT;
-			}
+			ret[index++] = ((bb & SquareBB[sq]) != 0) << PRECISION_SHIFT;
 		}
 	}
 
@@ -489,14 +485,7 @@ std::vector<deltaPoint>& Position::CalculateMoveDelta(Move move)
 
 size_t Position::modifier(size_t index)
 {
-	if (index >= 384)
-	{
-		return index - 384;
-	}
-	else
-	{
-		return index + 384;
-	}
+	return index;
 }
 
 void Position::ApplySEECapture(Move move)
