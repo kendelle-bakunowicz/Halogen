@@ -393,7 +393,7 @@ void Bench()
 int ProcessDataForPyTorch()
 {
 	char line[256];
-	FILE* fin = fopen("D:\\SF_data\\Fishtest_10_per.book", "r");
+	FILE* fin = fopen("Fishtest_10_per_43m.fens", "r");
 
 	Position position;
 
@@ -414,9 +414,9 @@ int ProcessDataForPyTorch()
 			continue;
 
 		// Find the result { W, L, D } => { 1.0, 0.0, 0.5 }
-		if (strstr(line, "1-0")) printf("1.0");
-		else if (strstr(line, "0-1")) printf("0.0");
-		else if (strstr(line, "1/2-1/2")) printf("0.5");
+		if (strstr(line, "[1.0]")) printf("1.0");
+		else if (strstr(line, "[0.0]")) printf("0.0");
+		else if (strstr(line, "[0.5]")) printf("0.5");
 
 		for (int i = 0; i < N_PIECES; i++)
 		{
