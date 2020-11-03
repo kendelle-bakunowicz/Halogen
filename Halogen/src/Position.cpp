@@ -489,14 +489,7 @@ std::vector<deltaPoint>& Position::CalculateMoveDelta(Move move)
 
 size_t Position::modifier(size_t index)
 {
-	if (index >= 384)
-	{
-		return index - 384;
-	}
-	else
-	{
-		return index + 384;
-	}
+	return index;
 }
 
 void Position::ApplySEECapture(Move move)
