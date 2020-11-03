@@ -122,15 +122,15 @@ int main(int argc, char* argv[])
 			int myInc  = position.GetTurn() ? winc : binc;
 
 			if (depth != 0) 										
-				searchThread = thread([=, &position] {DepthSearch(position, depth); });															//fixed depth search
+				searchThread = thread([=, &position] {DepthSearch(position, depth); });																//fixed depth search
 			else if (searchTime != 0) 							
-				searchThread = thread([=, &position] {MultithreadedSearch(position, searchTime, searchTime, ThreadCount); });					//fixed time search
+				searchThread = thread([=, &position] {MultithreadedSearch(position, searchTime, searchTime, ThreadCount); });						//fixed time search
 			else if (movestogo != 0)		
-				searchThread = thread([=, &position] {MultithreadedSearch(position, myTime, myTime / (movestogo + 1) * 3 / 2, ThreadCount); });	//repeating time control
+				searchThread = thread([=, &position] {MultithreadedSearch(position, myTime, myTime / (movestogo + 1) * 16 / 10, ThreadCount); });	//repeating time control
 			else if (myInc != 0)
-				searchThread = thread([=, &position] {MultithreadedSearch(position, myTime, myTime / 16 + myInc, ThreadCount); });				//increment time control
+				searchThread = thread([=, &position] {MultithreadedSearch(position, myTime, myTime / 16 + myInc, ThreadCount); });					//increment time control
 			else 
-				searchThread = thread([=, &position] {MultithreadedSearch(position, myTime, myTime / 20, ThreadCount); });						//sudden death time control
+				searchThread = thread([=, &position] {MultithreadedSearch(position, myTime, myTime / 20, ThreadCount); });							//sudden death time control
 
 			searchThread.detach();
 		}
