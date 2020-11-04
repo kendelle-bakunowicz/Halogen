@@ -51,13 +51,13 @@ struct HiddenLayer
     HiddenLayer(std::vector<int16_t> inputs);                                                                   // <for first neuron>: weight1, weight2, ..., weightN, bias, <next neuron etc...>
     std::array<int16_t, OUTPUT_COUNT> FeedForward(std::array<int16_t, INPUT_COUNT>& input);
 
-    void ApplyDelta(deltaArray& deltaVec);                                                         //incrementally update the connections between input layer and first hidden layer
+    void ApplyDelta(deltaArray& deltaVec, int16_t multiplier);                                                  //incrementally update the connections between input layer and first hidden layer
 
     std::array<Neuron<INPUT_COUNT>, OUTPUT_COUNT>* neurons;
     std::array<int16_t, OUTPUT_COUNT> zeta;
 
 private:
-    std::array<int16_t, INPUT_COUNT * OUTPUT_COUNT>* weightTranspose;                                                                       //first neuron first weight, second neuron first weight etc...
+    std::array<int16_t, INPUT_COUNT * OUTPUT_COUNT>* weightTranspose;                                           //first neuron first weight, second neuron first weight etc...
 };
 
 struct Network
@@ -65,8 +65,8 @@ struct Network
     Network(const std::vector<std::vector<int16_t>>& inputs);
     void RecalculateIncremental(std::array<int16_t, INPUT_NEURONS> inputs);
 
-    void ApplyDelta(deltaArray& delta);                                                            //incrementally update the connections between input layer and first hidden layer
-    void ApplyInverseDelta();                                                                                   //for un-make moves
+    void ApplyDelta(deltaArray& delta);                                                                         //incrementally update the connections between input layer and first hidden layer
+    void UndoDelta();                                                                  //for un-make moves
     int16_t QuickEval();                                                                                        //when used with above, this just calculates starting from the alpha of first hidden layer and skips input -> hidden
 
 private:
@@ -75,8 +75,8 @@ private:
     HiddenLayer <INPUT_NEURONS, HIDDEN_NEURONS> hiddenLayer;
     Neuron<HIDDEN_NEURONS> outputNeuron;
 
-    std::array<std::array<int16_t, HIDDEN_NEURONS>, MAX_DEPTH>  OldZeta;
-    size_t incrementalDepth = 0;
+    std::array<deltaArray, MAX_DEPTH> deltaStack;
+    size_t deltaStackSize = 0;
 };
 
 Network InitNetwork();

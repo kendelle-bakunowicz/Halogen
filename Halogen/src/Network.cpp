@@ -135,14 +135,14 @@ std::array<int16_t, OUTPUT_COUNT> HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::FeedFo
 }
 
 template<size_t INPUT_COUNT, size_t OUTPUT_COUNT>
-void HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::ApplyDelta(deltaArray& deltaVec)
+void HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::ApplyDelta(deltaArray& deltaVec, int16_t multiplier)
 {
     for (size_t point = 0; point < deltaVec.size; point++)
     {
         int16_t deltaValue = deltaVec.deltas[point].delta; 
         size_t weightTransposeIndex = deltaVec.deltas[point].index * OUTPUT_COUNT;
 
-        if (deltaValue == 1)
+        if (deltaValue * multiplier == 1)
         {
             for (size_t neuron = 0; neuron < OUTPUT_COUNT; neuron++)
             {
@@ -150,7 +150,7 @@ void HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::ApplyDelta(deltaArray& deltaVec)
             }
         }
 
-        if (deltaValue == -1)
+        if (deltaValue * multiplier == -1)
         {
             for (size_t neuron = 0; neuron < OUTPUT_COUNT; neuron++)
             {
@@ -160,7 +160,7 @@ void HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::ApplyDelta(deltaArray& deltaVec)
     }
 }
 
-Network::Network(const std::vector<std::vector<int16_t>>& inputs) : hiddenLayer(inputs[1]), outputNeuron(std::vector<int16_t>(inputs.back().begin(), inputs.back().end() - 1), inputs.back().back()), OldZeta()
+Network::Network(const std::vector<std::vector<int16_t>>& inputs) : hiddenLayer(inputs[1]), outputNeuron(std::vector<int16_t>(inputs.back().begin(), inputs.back().end() - 1), inputs.back().back()), deltaStack()
 {
 }
 
@@ -168,9 +168,9 @@ void Network::RecalculateIncremental(std::array<int16_t, INPUT_NEURONS> inputs)
 {
     for (size_t i = 0; i < MAX_DEPTH; i++)
     {
-        OldZeta[i] = {};
+        deltaStack[i] = {};
     }
-    incrementalDepth = 0;
+    deltaStackSize = 0;
 
     //We never actually use FeedForward to get the evaluaton, only to 'refresh' the incremental updates and so we only need to do connection with first layer
     hiddenLayer.FeedForward(inputs);
@@ -178,13 +178,13 @@ void Network::RecalculateIncremental(std::array<int16_t, INPUT_NEURONS> inputs)
 
 void Network::ApplyDelta(deltaArray& delta)
 {
-    OldZeta[incrementalDepth++] = hiddenLayer.zeta;
-    hiddenLayer.ApplyDelta(delta);
+    deltaStack[deltaStackSize++] = delta;
+    hiddenLayer.ApplyDelta(delta, 1);
 }
 
-void Network::ApplyInverseDelta()
+void Network::UndoDelta()
 {
-    hiddenLayer.zeta = OldZeta[--incrementalDepth];
+    hiddenLayer.ApplyDelta(deltaStack[--deltaStackSize], -1);
 }
 
 int16_t Network::QuickEval()

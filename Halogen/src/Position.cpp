@@ -172,7 +172,7 @@ void Position::RevertMove()
 	RestorePreviousParamiters();
 	key = PreviousKeys.back();
 	PreviousKeys.pop_back();
-	net.ApplyInverseDelta();
+	net.UndoDelta();
 }
 
 void Position::ApplyNullMove()
@@ -201,7 +201,7 @@ void Position::RevertNullMove()
 	RestorePreviousParamiters();
 	key = PreviousKeys.back();
 	PreviousKeys.pop_back();
-	net.ApplyInverseDelta();
+	net.UndoDelta();
 }
 
 void Position::Print() const
