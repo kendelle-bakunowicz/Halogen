@@ -1,7 +1,7 @@
 #include "Network.h"
 
 static const char* WeightsTXT[] = {
-    #include "epoch1751_b8192_quant.nn"
+    #include "halogen.e2200.b1024.d12_quant.nn"
     ""
 };
 
