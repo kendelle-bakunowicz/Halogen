@@ -860,6 +860,6 @@ void ThreadSharedData::ReportWantsToStop(unsigned int threadID)
 
 int ThreadSharedData::GetAspirationScore()
 {
-	std::lock_guard<std::mutex> lg(ioMutex);
+	std::lock_guard<std::mutex> lg(ioMutex); 
 	return prevScore;
 }
