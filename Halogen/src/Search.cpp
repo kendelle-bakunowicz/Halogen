@@ -49,8 +49,10 @@ enum MoveGenerationStage
 {
 	GEN_TT_MOVE,
 	GIVE_TT_MOVE,
-	GEN_ALL_OTHERS,
-	GIVE_ALL_OTHERS,
+	GEN_LOUD,
+	GIVE_LOUD,
+	GEN_QUIET,
+	GIVE_QUIET,
 };
 
 class MoveGenerator
@@ -72,7 +74,6 @@ private:
 MoveGenerator::MoveGenerator()
 {
 	stage = GEN_TT_MOVE;
-	index = 0;
 }
 
 MoveGenerator::~MoveGenerator()
@@ -89,7 +90,7 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 
 	if (stage == GIVE_TT_MOVE)
 	{
-		stage = GEN_ALL_OTHERS;
+		stage = GEN_LOUD;
 		if (!TTmove.IsUninitialized() && MoveIsLegal(position, TTmove))
 		{
 			move = TTmove;
@@ -97,14 +98,36 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 		}
 	}
 
-	if (stage == GEN_ALL_OTHERS)
+	if (stage == GEN_LOUD)
 	{
-		stage = GIVE_ALL_OTHERS;
-		LegalMoves(position, moveList);
+		stage = GIVE_LOUD;
+		QuiescenceMoves(position, moveList);
 		OrderMoves(moveList, position, distanceFromRoot, locals);
+		index = 0;
 	}
 
-	if (stage == GIVE_ALL_OTHERS)
+	if (stage == GIVE_LOUD)
+	{
+		if (index < moveList.size())
+		{
+			move = moveList[index++];
+			return true;
+		}
+		else
+		{
+			stage = GEN_QUIET;
+		}
+	}
+
+	if (stage == GEN_QUIET)
+	{
+		stage = GIVE_QUIET;
+		QuietMoves(position, moveList);
+		OrderMoves(moveList, position, distanceFromRoot, locals);
+		index = 0;
+	}
+
+	if (stage == GIVE_QUIET)
 	{
 		if (index < moveList.size())
 		{
