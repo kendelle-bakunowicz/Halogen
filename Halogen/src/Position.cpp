@@ -535,7 +535,7 @@ int16_t Position::GetEvaluation()
 
 bool Position::NodesSearchedAddToThreadTotal()
 {
-	if (nodesSearched > NodeCountChunk)
+	if ((nodesSearched & (NodeCountChunk - 1)) == 0)
 	{
 		nodesSearched -= NodeCountChunk;
 		return true;
@@ -546,7 +546,7 @@ bool Position::NodesSearchedAddToThreadTotal()
 
 bool Position::TbHitaddToThreadTotal()
 {
-	if (tbHits > NodeCountChunk)
+	if ((tbHits & (NodeCountChunk - 1)) == 0)
 	{
 		tbHits -= NodeCountChunk;
 		return true;
