@@ -1,8 +1,9 @@
 #include "Search.h"
 
 const std::vector<int> FutilityMargins = { 100, 150, 250, 400, 600 };
-const unsigned int R = 3;					//Null-move reduction depth
-const unsigned int VariableNullDepth = 7;	//Beyond this depth R = 4
+
+const unsigned int nullReduction = 3;		//Null-move reduction depth
+const unsigned int nullDepthAdd = 4;		//each multiple of this depth adds an additional reduction on depth
 
 TranspositionTable tTable;
 
@@ -412,7 +413,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	/*Null move pruning*/
 	if (AllowedNull(allowedNull, position, beta, alpha, depthRemaining) && (staticScore > beta))
 	{
-		unsigned int reduction = R + (depthRemaining >= static_cast<int>(VariableNullDepth));
+		unsigned int reduction = nullReduction + depthRemaining / 4;
 
 		position.ApplyNullMove();
 		int score = -NegaScout(position, initialDepth, depthRemaining - reduction - 1, -beta, -beta + 1, -colour, distanceFromRoot + 1, false, locals, sharedData).GetScore();
@@ -752,8 +753,8 @@ bool AllowedNull(bool allowedNull, const Position& position, int beta, int alpha
 		&& !IsSquareThreatened(position, position.GetKing(position.GetTurn()), position.GetTurn())
 		&& !IsPV(beta, alpha)
 		&& !IsEndGame(position)
-		&& depthRemaining > R + 1								//don't drop directly into quiessence search. particularly important in mate searches as quiessence search has no mate detection currently. See 5rk1/2p4p/2p4r/3P4/4p1b1/1Q2NqPp/PP3P1K/R4R2 b - - 0 1
-		&& GetBitCount(position.GetAllPieces()) >= 5;	//avoid null move pruning in very late game positions due to zanauag issues. Even with verification search e.g 8/6k1/8/8/8/8/1K6/Q7 w - - 0 1 
+		//&& depthRemaining - 1 > nullReduction + depthRemaining / 4	//don't drop directly into quiessence search. particularly important in mate searches as quiessence search has no mate detection currently. See 5rk1/2p4p/2p4r/3P4/4p1b1/1Q2NqPp/PP3P1K/R4R2 b - - 0 1
+		&& GetBitCount(position.GetAllPieces()) >= 5;				//avoid null move pruning in very late game positions due to zanauag issues. Even with verification search e.g 8/6k1/8/8/8/8/1K6/Q7 w - - 0 1 
 }
 
 bool IsEndGame(const Position& position)
