@@ -100,8 +100,17 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 
 	if (stage == GEN_LOUD)
 	{
-		stage = GIVE_LOUD;
-		QuiescenceMoves(position, moveList);
+		if (IsInCheck(position))
+		{
+			LegalMoves(position, moveList);
+			stage = GIVE_QUIET;
+		}
+		else
+		{
+			QuiescenceMoves(position, moveList);
+			stage = GIVE_LOUD;
+		}
+
 		OrderMoves(moveList, position, distanceFromRoot, locals);
 		index = 0;
 	}
