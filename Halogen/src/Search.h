@@ -1,10 +1,8 @@
 #pragma once
 
 #include "TranspositionTable.h"
-#include "Position.h"
-#include "MoveGeneration.h"
+#include "MoveGenerator.h"
 #include "Zobrist.h"
-#include "Move.h"
 #include "TimeManage.h"
 #include "tbprobe.h"
 #include <ctime>
@@ -32,11 +30,6 @@ enum Score
 
 	MateScore = -10000,
 	Draw = 0
-};
-
-struct Killer
-{
-	Move move[2];
 };
 
 struct SearchData
