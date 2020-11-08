@@ -320,10 +320,9 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	bool FutileNode = (depthRemaining < static_cast<int>(FutilityMargins.size()) && staticScore + FutilityMargins.at(std::max<int>(0, depthRemaining)) < a);
 
 	Move move;
-	MoveGenerator generator;
-	Move hashMove = GetHashMove(position, distanceFromRoot);
-
-	for (int i = 0; generator.GetNext(move, position, distanceFromRoot, hashMove, locals.KillerMoves, locals.HistoryMatrix); i++)
+	MoveGenerator generator(position, distanceFromRoot, GetHashMove(position, distanceFromRoot), locals.KillerMoves, locals.HistoryMatrix);
+	
+	for (int i = 0; generator.GetNext(move); i++)
 	{
 		position.ApplyMove(move);
 		tTable.PreFetch(position.GetZobristKey());							//load the transposition into l1 cache. ~5% speedup
@@ -669,10 +668,10 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 	int Score = staticScore;
 		
 	Move hashMove = GetHashMove(position, distanceFromRoot);
-	QuiesMoveGenerator generator;
+	QuiesMoveGenerator generator(position, distanceFromRoot, hashMove, locals.KillerMoves, locals.HistoryMatrix);
 	Move move;
 
-	for (int i = 0; generator.GetNext(move, position, distanceFromRoot, hashMove, locals.KillerMoves, locals.HistoryMatrix); i++)
+	for (int i = 0; generator.GetNext(move); i++)
 	{
 		int SEE = 0;
 		if (move.GetFlag() == CAPTURE) //seeCapture doesn't work for ep or promotions

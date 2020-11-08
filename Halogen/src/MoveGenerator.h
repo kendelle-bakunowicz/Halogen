@@ -10,10 +10,9 @@ struct Killer
 class MoveGenerator
 {
 public:
-	MoveGenerator();
-	~MoveGenerator();
+	MoveGenerator(Position& Position, int DistanceFromRoot, Move HashMove, std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES]);
 
-	bool GetNext(Move& move, Position& position, int distanceFromRoot, Move& hashMove, std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES]);
+	bool GetNext(Move& move);
 
 private:
 	enum class Stage
@@ -29,15 +28,20 @@ private:
 	Stage stage;
 
 	size_t index;
+
+	Position& position;
+	int distanceFromRoot;
+	Move& hashMove;
+	std::vector<Killer>& killerMoves;
+	unsigned int (&historyMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES];
 };
 
 class QuiesMoveGenerator
 {
 public:
-	QuiesMoveGenerator();
-	~QuiesMoveGenerator();
+	QuiesMoveGenerator(Position& Position, int DistanceFromRoot, Move HashMove, std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES]);
 
-	bool GetNext(Move& move, Position& position, int distanceFromRoot, Move& hashMove, std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES]);
+	bool GetNext(Move& move);
 
 private:
 	enum class Stage
@@ -51,6 +55,12 @@ private:
 	Stage stage;
 
 	size_t index;
+
+	Position& position;
+	int distanceFromRoot;
+	Move& hashMove;
+	std::vector<Killer>& killerMoves;
+	unsigned int(&historyMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES];
 };
 
 

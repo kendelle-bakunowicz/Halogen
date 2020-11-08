@@ -2,17 +2,13 @@
 
 void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRoot, Move& hashMove, std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES]);
 
-MoveGenerator::MoveGenerator()
+MoveGenerator::MoveGenerator(Position& Position, int DistanceFromRoot, Move HashMove, std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES]) : position(Position), distanceFromRoot(DistanceFromRoot), hashMove(HashMove), killerMoves(KillerMoves), historyMatrix(HistoryMatrix)
 {
 	stage = Stage::GEN_TT_MOVE;
 	index = 0;
 }
 
-MoveGenerator::~MoveGenerator()
-{
-}
-
-bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot, Move& hashMove, std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES])
+bool MoveGenerator::GetNext(Move& move)
 {
 	if (stage == Stage::GEN_TT_MOVE)
 	{
@@ -34,7 +30,8 @@ bool MoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot
 	{
 		stage = Stage::GIVE_ALL_OTHERS;
 		LegalMoves(position, moveList);
-		OrderMoves(moveList, position, distanceFromRoot, hashMove, KillerMoves, HistoryMatrix);
+		OrderMoves(moveList, position, distanceFromRoot, hashMove, killerMoves, historyMatrix);
+		index = 0;
 	}
 
 	if (stage == Stage::GIVE_ALL_OTHERS)
@@ -168,23 +165,14 @@ int seeCapture(Position& position, const Move& move)
 	return value;
 }
 
-QuiesMoveGenerator::QuiesMoveGenerator()
-{
-	stage = Stage::GEN_ALL;
-	index = 0;
-}
-
-QuiesMoveGenerator::~QuiesMoveGenerator()
-{
-}
-
-bool QuiesMoveGenerator::GetNext(Move& move, Position& position, int distanceFromRoot, Move& hashMove, std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES])
+bool QuiesMoveGenerator::GetNext(Move& move)
 {
 	if (stage == Stage::GEN_ALL)
 	{
 		stage = Stage::GIVE_ALL;
 		QuiescenceMoves(position, moveList);
-		OrderMoves(moveList, position, distanceFromRoot, hashMove, KillerMoves, HistoryMatrix);
+		OrderMoves(moveList, position, distanceFromRoot, hashMove, killerMoves, historyMatrix);
+		index = 0;
 	}
 
 	if (stage == Stage::GIVE_ALL)
@@ -197,4 +185,10 @@ bool QuiesMoveGenerator::GetNext(Move& move, Position& position, int distanceFro
 	}
 
 	return false;
+}
+
+QuiesMoveGenerator::QuiesMoveGenerator(Position& Position, int DistanceFromRoot, Move HashMove, std::vector<Killer>& KillerMoves, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES]) : position(Position), distanceFromRoot(DistanceFromRoot), hashMove(HashMove), killerMoves(KillerMoves), historyMatrix(HistoryMatrix)
+{
+	stage = Stage::GEN_ALL;
+	index = 0;
 }
