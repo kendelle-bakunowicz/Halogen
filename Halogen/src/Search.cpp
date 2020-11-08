@@ -23,7 +23,7 @@ int extension(Position & position, const Move& move, int alpha, int beta);
 Move GetHashMove(const Position& position, int depthRemaining, int distanceFromRoot);
 Move GetHashMove(const Position& position, int distanceFromRoot);
 void AddKiller(Move move, int distanceFromRoot, std::vector<Killer>& KillerMoves);
-void AddHistory(const Move& move, int depthRemaining, unsigned int (&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES], bool sideToMove);
+void AddHistory(const Move& move, int depthRemaining, unsigned int (&HistoryMatrix)[N_PIECES][N_SQUARES][N_SQUARES], const Position & position);
 void UpdatePV(Move move, int distanceFromRoot, std::vector<std::vector<Move>>& PvTable);
 int Reduction(int depth, int i, int alpha, int beta);
 int matedIn(int distanceFromRoot);
@@ -170,7 +170,7 @@ void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRo
 		//Quiet
 		else
 		{
-			moves[i].orderScore = std::min(1000000U, locals.HistoryMatrix[position.GetTurn()][moves[i].GetFrom()][moves[i].GetTo()]);
+			moves[i].orderScore = std::min(1000000U, locals.HistoryMatrix[position.GetSquare(moves[i].GetFrom())][moves[i].GetFrom()][moves[i].GetTo()]);
 		}
 	}
 
@@ -466,7 +466,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		if (a >= beta) //Fail high cutoff
 		{
 			AddKiller(hashMove, distanceFromRoot, locals.KillerMoves);
-			AddHistory(hashMove, depthRemaining, locals.HistoryMatrix, position.GetTurn());
+			AddHistory(hashMove, depthRemaining, locals.HistoryMatrix, position);
 
 			if (!locals.AbortSearch(position.GetNodes()) && !(sharedData.ThreadAbort(initialDepth)))
 				AddScoreToTable(Score, alpha, position, depthRemaining, distanceFromRoot, beta, bestMove);
@@ -540,7 +540,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		if (a >= beta) //Fail high cutoff
 		{
 			AddKiller(moves.at(i), distanceFromRoot, locals.KillerMoves);
-			AddHistory(moves[i], depthRemaining, locals.HistoryMatrix, position.GetTurn());
+			AddHistory(moves[i], depthRemaining, locals.HistoryMatrix, position);
 			break;
 		}
 
@@ -912,10 +912,10 @@ void AddKiller(Move move, int distanceFromRoot, std::vector<Killer>& KillerMoves
 	}
 }
 
-void AddHistory(const Move& move, int depthRemaining, unsigned int(&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES], bool sideToMove)
+void AddHistory(const Move& move, int depthRemaining, unsigned int(&HistoryMatrix)[N_PIECES][N_SQUARES][N_SQUARES], const Position & position)
 {
 	if (move.IsCapture() || move.IsPromotion()) return;
-	HistoryMatrix[sideToMove][move.GetFrom()][move.GetTo()] += depthRemaining * depthRemaining;
+	HistoryMatrix[position.GetSquare(move.GetFrom())][move.GetFrom()][move.GetTo()] += depthRemaining * depthRemaining;
 }
 
 Move GetHashMove(const Position& position, int depthRemaining, int distanceFromRoot)
