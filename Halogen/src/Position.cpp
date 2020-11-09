@@ -532,3 +532,25 @@ int16_t Position::GetEvaluation()
 {
 	return net.QuickEval();
 }
+
+bool Position::NodesSearchedAddToThreadTotal()
+{
+	if (nodesSearched > NodeCountChunk)
+	{
+		nodesSearched -= NodeCountChunk;
+		return true;
+	}
+
+	return false;
+}
+
+bool Position::TbHitaddToThreadTotal()
+{
+	if (tbHits > NodeCountChunk)
+	{
+		tbHits -= NodeCountChunk;
+		return true;
+	}
+
+	return false;
+}

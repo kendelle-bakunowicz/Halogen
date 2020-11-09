@@ -13,13 +13,13 @@ bool UseTransposition(TTEntry& entry, int distanceFromRoot, int alpha, int beta)
 bool CheckForRep(Position& position, int distanceFromRoot);
 bool LMR(bool InCheck, const Position& position, int depthRemaining);
 bool IsFutile(Move move, int beta, int alpha, bool InCheck, const Position& position);
-bool AllowedNull(bool allowedNull, const Position& position, int beta, int alpha, unsigned int depthRemaining);
+bool AllowedNull(bool allowedNull, const Position& position, int beta, int alpha);
 bool IsEndGame(const Position& position);
 bool IsPV(int beta, int alpha);
 void AddScoreToTable(int Score, int alphaOriginal, const Position& position, int depthRemaining, int distanceFromRoot, int beta, Move bestMove);
 void UpdateBounds(const TTEntry& entry, int& alpha, int& beta);
 int TerminalScore(const Position& position, int distanceFromRoot);
-int extension(Position & position, const Move& move, int alpha, int beta);
+int extension(Position & position, int alpha, int beta);
 Move GetHashMove(const Position& position, int depthRemaining, int distanceFromRoot);
 Move GetHashMove(const Position& position, int distanceFromRoot);
 void AddKiller(Move move, int distanceFromRoot, std::vector<Killer>& KillerMoves);
@@ -341,6 +341,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 #endif 
 
 	locals.PvTable[distanceFromRoot].clear();
+	if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
 
 	if (initialDepth > 1 && locals.AbortSearch(position.GetNodes())) return -1;										//we must check later that we don't let this score pollute the transposition table
 	if (sharedData.ThreadAbort(initialDepth)) return -1;												//another thread has finished searching this depth: ABORT!
@@ -410,7 +411,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	int staticScore = colour * EvaluatePositionNet(position, locals.evalTable);
 
 	/*Null move pruning*/
-	if (AllowedNull(allowedNull, position, beta, alpha, depthRemaining) && (staticScore > beta))
+	if (AllowedNull(allowedNull, position, beta, alpha) && (staticScore > beta))
 	{
 		unsigned int reduction = R + (depthRemaining >= static_cast<int>(VariableNullDepth));
 
@@ -445,11 +446,9 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	{
 		position.ApplyMove(hashMove);
 		tTable.PreFetch(position.GetZobristKey());							//load the transposition into l1 cache. ~5% speedup
-		int extendedDepth = depthRemaining + extension(position, hashMove, alpha, beta);
+		int extendedDepth = depthRemaining + extension(position, alpha, beta);
 		int newScore = -NegaScout(position, initialDepth, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true, locals, sharedData).GetScore();
 		position.RevertMove();
-
-		if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
 
 		if (newScore > Score)
 		{
@@ -502,7 +501,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 
 		position.ApplyMove(moves.at(i));
 		tTable.PreFetch(position.GetZobristKey());							//load the transposition into l1 cache. ~5% speedup
-		if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
 
 		//futility pruning
 		if (IsFutile(moves[i], beta, alpha, InCheck, position) && i > 0 && FutileNode)	//Possibly stop futility pruning if alpha or beta are close to mate scores
@@ -511,7 +509,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 			continue;
 		}
 
-		int extendedDepth = depthRemaining + extension(position, moves[i], alpha, beta);
+		int extendedDepth = depthRemaining + extension(position, alpha, beta);
 
 		//late move reductions
 		if (LMR(InCheck, position, depthRemaining) && i > 3)
@@ -716,7 +714,7 @@ bool CheckForRep(Position& position, int distanceFromRoot)
 	return false;
 }
 
-int extension(Position& position, const Move& move, int alpha, int beta)
+int extension(Position& position, int alpha, int beta)
 {
 	int extension = 0;
 
@@ -746,10 +744,10 @@ bool IsFutile(Move move, int beta, int alpha, bool InCheck, const Position& posi
 		&& !IsInCheck(position);
 }
 
-bool AllowedNull(bool allowedNull, const Position& position, int beta, int alpha, unsigned int depthRemaining)
+bool AllowedNull(bool allowedNull, const Position& position, int beta, int alpha)
 {
 	return allowedNull
-		&& !IsSquareThreatened(position, position.GetKing(position.GetTurn()), position.GetTurn())
+		&& !IsInCheck(position)
 		&& !IsPV(beta, alpha)
 		&& !IsEndGame(position)
 		&& GetBitCount(position.GetAllPieces()) >= 5;	//avoid null move pruning in very late game positions due to zanauag issues. Even with verification search e.g 8/6k1/8/8/8/8/1K6/Q7 w - - 0 1 
@@ -813,6 +811,7 @@ int mateIn(int distanceFromRoot)
 SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha, int beta, int colour, unsigned int distanceFromRoot, int depthRemaining, SearchData& locals, ThreadSharedData& sharedData)
 {
 	locals.PvTable[distanceFromRoot].clear();
+	if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
 
 	if (initialDepth > 1 && locals.AbortSearch(position.GetNodes())) return -1;
 	if (sharedData.ThreadAbort(initialDepth)) return -1;									//another thread has finished searching this depth: ABORT!
@@ -875,8 +874,6 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 		position.ApplyMove(moves.at(i));
 		int newScore = -Quiescence(position, initialDepth, -beta, -alpha, -colour, distanceFromRoot + 1, depthRemaining - 1, locals, sharedData).GetScore();
 		position.RevertMove();
-
-		if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
 
 		if (newScore > Score)
 		{

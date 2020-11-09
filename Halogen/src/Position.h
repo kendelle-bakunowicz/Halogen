@@ -11,7 +11,6 @@
 #endif 
 
 constexpr size_t NodeCountChunk = 1 << 12;
-constexpr size_t NodeChunkMask = NodeCountChunk - 1;
 
 /*
 This class holds all the data required to define a chess board position, as well as some functions to manipulate and extract this data in convienient ways.
@@ -53,8 +52,8 @@ public:
 	int16_t GetEvaluation();
 
 	void addTbHit() { tbHits++; }
-	bool NodesSearchedAddToThreadTotal() { return (nodesSearched & NodeChunkMask) == 0; }
-	bool TbHitaddToThreadTotal() { return (tbHits & NodeChunkMask) == 0; }
+	bool NodesSearchedAddToThreadTotal();
+	bool TbHitaddToThreadTotal();
 	size_t GetNodes() { return nodesSearched; }
 
 private:
