@@ -53,9 +53,8 @@ public:
 	int16_t GetEvaluation();
 
 	void addTbHit() { tbHits++; }
-	bool NodesSearchedAddToThreadTotal() { return (nodesSearched & NodeChunkMask) == 0; }
-	bool TbHitaddToThreadTotal() { return (tbHits & NodeChunkMask) == 0; }
-	size_t GetNodes() { return nodesSearched; }
+	size_t GetNodes() const { return nodesSearched; }
+	size_t GetTBHits() const { return tbHits; }
 
 private:
 	size_t nodesSearched;
