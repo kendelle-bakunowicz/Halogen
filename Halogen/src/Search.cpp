@@ -408,7 +408,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	int staticScore = colour * EvaluatePositionNet(position, locals.evalTable);
 
 	/*Null move pruning*/
-	if (AllowedNull(allowedNull, position, beta, alpha, depthRemaining) && (staticScore > beta))
+	if (AllowedNull(allowedNull, position, beta, alpha, depthRemaining))
 	{
 		unsigned int reduction = R + (depthRemaining >= static_cast<int>(VariableNullDepth));
 
