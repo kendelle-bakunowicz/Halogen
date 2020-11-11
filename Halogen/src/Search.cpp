@@ -485,8 +485,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	if (hashMove.IsUninitialized() && depthRemaining > 3)
 		depthRemaining--;
 
-	bool FutileNode = (depthRemaining < static_cast<int>(FutilityMargins.size()) && staticScore + FutilityMargins.at(std::max<int>(0, depthRemaining)) < a);
-
 	for (size_t i = 0; i < moves.size(); i++)	
 	{
 		if (moves[i] == hashMove)
@@ -497,7 +495,10 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
 
 		//futility pruning
-		if (IsFutile(moves[i], beta, alpha, InCheck, position) && i > 0 && FutileNode)	//Possibly stop futility pruning if alpha or beta are close to mate scores
+		if (IsFutile(moves[i], beta, alpha, InCheck, position) && 
+			i > 0 && 
+			depthRemaining < static_cast<int>(FutilityMargins.size()) && 
+			colour * EvaluatePositionNet(position, locals.evalTable) + FutilityMargins.at(std::max<int>(0, depthRemaining)) < a)	
 		{
 			position.RevertMove();
 			continue;
@@ -730,8 +731,6 @@ bool LMR(bool InCheck, const Position& position)
 bool IsFutile(Move move, int beta, int alpha, bool InCheck, const Position& position)
 {
 	return !IsPV(beta, alpha)
-		&& !move.IsCapture() 
-		&& !move.IsPromotion() 
 		&& !InCheck 
 		&& !IsInCheck(position);
 }
