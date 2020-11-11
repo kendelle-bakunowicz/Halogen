@@ -372,6 +372,10 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		}
 	}
 
+	Move hashMove = GetHashMove(position, distanceFromRoot);
+	if (hashMove.IsUninitialized() && depthRemaining > 3)
+		depthRemaining--;
+
 	/*Query the transpotition table*/
 	if (!IsPV(beta, alpha)) 
 	{
@@ -432,7 +436,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	int b = beta;
 
 	/*If a hash move exists, search with that move first and hope we can get a cutoff*/
-	Move hashMove = GetHashMove(position, distanceFromRoot);
 	if (!hashMove.IsUninitialized() && position.GetFiftyMoveCount() < 100 && MoveIsLegal(position, hashMove))	//if its 50 move rule we need to skip this and figure out if its checkmate or draw below
 	{
 		position.ApplyMove(hashMove);
@@ -481,9 +484,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	
 	OrderMoves(moves, position, distanceFromRoot, locals);
 	bool InCheck = IsInCheck(position);
-
-	if (hashMove.IsUninitialized() && depthRemaining > 3)
-		depthRemaining--;
 
 	bool FutileNode = (depthRemaining < static_cast<int>(FutilityMargins.size()) && staticScore + FutilityMargins.at(std::max<int>(0, depthRemaining)) < a);
 
