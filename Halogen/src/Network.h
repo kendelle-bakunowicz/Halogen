@@ -14,7 +14,8 @@
 #include "BitBoardDefine.h"
 
 constexpr size_t INPUT_NEURONS = 12 * 64;
-constexpr size_t HIDDEN_NEURONS = 128;
+constexpr size_t HIDDEN_NEURONS_1 = 128;
+constexpr size_t HIDDEN_NEURONS_2 = 32;
 
 constexpr int16_t MAX_VALUE = 128;
 constexpr int16_t PRECISION = ((size_t)std::numeric_limits<int16_t>::max() + 1) / MAX_VALUE;
@@ -70,10 +71,11 @@ struct Network
 private:
 
     //hard code the number of layers here
-    HiddenLayer <INPUT_NEURONS, HIDDEN_NEURONS> hiddenLayer;
-    Neuron<HIDDEN_NEURONS> outputNeuron;
+    HiddenLayer <INPUT_NEURONS, HIDDEN_NEURONS_1> hiddenLayer1;
+    HiddenLayer <HIDDEN_NEURONS_1, HIDDEN_NEURONS_2> hiddenLayer2;
+    Neuron<HIDDEN_NEURONS_2> outputNeuron;
 
-    std::array<std::array<int16_t, HIDDEN_NEURONS>, MAX_DEPTH>  OldZeta;
+    std::array<std::array<int16_t, HIDDEN_NEURONS_1>, MAX_DEPTH>  OldZeta;
     size_t incrementalDepth = 0;
 };
 

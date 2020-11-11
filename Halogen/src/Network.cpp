@@ -1,7 +1,7 @@
 #include "Network.h"
 
 static const char* WeightsTXT[] = {
-    #include "epoch1500_b8192_quant128.nn"
+    #include "epoch100_b8192_quant128_768-128-32-1.nn"
     ""
 };
 
@@ -160,7 +160,7 @@ void HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::ApplyDelta(deltaArray& deltaVec)
     }
 }
 
-Network::Network(const std::vector<std::vector<int16_t>>& inputs) : hiddenLayer(inputs[1]), outputNeuron(std::vector<int16_t>(inputs.back().begin(), inputs.back().end() - 1), inputs.back().back()), OldZeta()
+Network::Network(const std::vector<std::vector<int16_t>>& inputs) : hiddenLayer1(inputs[1]), hiddenLayer2(inputs[2]), outputNeuron(std::vector<int16_t>(inputs.back().begin(), inputs.back().end() - 1), inputs.back().back()), OldZeta()
 {
 }
 
@@ -173,28 +173,35 @@ void Network::RecalculateIncremental(std::array<int16_t, INPUT_NEURONS> inputs)
     incrementalDepth = 0;
 
     //We never actually use FeedForward to get the evaluaton, only to 'refresh' the incremental updates and so we only need to do connection with first layer
-    hiddenLayer.FeedForward(inputs);
+    hiddenLayer1.FeedForward(inputs);
 }
 
 void Network::ApplyDelta(deltaArray& delta)
 {
-    OldZeta[incrementalDepth++] = hiddenLayer.zeta;
-    hiddenLayer.ApplyDelta(delta);
+    OldZeta[incrementalDepth++] = hiddenLayer1.zeta;
+    hiddenLayer1.ApplyDelta(delta);
 }
 
 void Network::ApplyInverseDelta()
 {
-    hiddenLayer.zeta = OldZeta[--incrementalDepth];
+    hiddenLayer1.zeta = OldZeta[--incrementalDepth];
 }
 
 int16_t Network::QuickEval()
 {
-    std::array<int16_t, HIDDEN_NEURONS> inputs;
-    
-    for (size_t i = 0; i < HIDDEN_NEURONS; i++)
+    std::array<int16_t, HIDDEN_NEURONS_1> inputs;
+    for (size_t i = 0; i < HIDDEN_NEURONS_1; i++)
     {
-        inputs[i] = std::max(int16_t(0), hiddenLayer.zeta[i]);
+        inputs[i] = std::max(int16_t(0), hiddenLayer1.zeta[i]); //ReLU activation applied here
     }
 
-    return (outputNeuron.FeedForward(inputs) + HALF_PRECISION) / PRECISION;
+    hiddenLayer2.FeedForward(inputs);
+
+    std::array<int16_t, HIDDEN_NEURONS_2> inputs_2;
+    for (size_t i = 0; i < HIDDEN_NEURONS_2; i++)
+    {
+        inputs_2[i] = std::max(int16_t(0), hiddenLayer2.zeta[i]); //ReLU activation applied here
+    }
+
+    return (outputNeuron.FeedForward(inputs_2) + HALF_PRECISION) / PRECISION;
 }
