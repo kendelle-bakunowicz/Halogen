@@ -4,6 +4,7 @@ int pieceValueVector[N_STAGES][N_PIECE_TYPES] = { {91, 532, 568, 715, 1279, 5000
                                                   {111, 339, 372, 638, 1301, 5000} };
 
 constexpr int TEMPO = 10;
+bool DrawnPieceCombination(const Position& position, bool winning);
 
 int EvaluatePositionNet(Position& position, EvalCacheTable& evalTable)
 {
@@ -12,6 +13,13 @@ int EvaluatePositionNet(Position& position, EvalCacheTable& evalTable)
     if (!evalTable.GetEntry(position.GetZobristKey(), eval))
     {
         eval = position.GetEvaluation() + (position.GetTurn() == WHITE ? TEMPO : -TEMPO);
+
+        if (position.GetPieceBB(WHITE_PAWN) == 0 && position.GetPieceBB(BLACK_PAWN) == 0 && DrawnPieceCombination(position, eval > 0))
+            eval /= 8;
+
+        if (position.GetPieceBB(Piece(PAWN, eval > 0)) == 0)
+            eval /= 2;
+
         evalTable.AddEntry(position.GetZobristKey(), eval);
     }
 
@@ -53,6 +61,26 @@ bool DeadPosition(const Position& position)
     if (WhiteMinor == 1 && BlackMinor == 0) return true;	//2
     if (WhiteMinor == 0 && BlackMinor == 1) return true;	//2
 
+    return false;
+}
+
+bool DrawnPieceCombination(const Position& position, bool winning)
+{
+    int winning_knight = GetBitCount(position.GetPieceBB(Piece(KNIGHT, winning)));
+    int winning_bishop = GetBitCount(position.GetPieceBB(Piece(BISHOP, winning)));
+    int winning_rook = GetBitCount(position.GetPieceBB(Piece(ROOK, winning)));
+    int winning_queen = GetBitCount(position.GetPieceBB(Piece(QUEEN, winning)));
+
+    int loosing_knight = GetBitCount(position.GetPieceBB(Piece(KNIGHT, !winning)));
+    int loosing_bishop = GetBitCount(position.GetPieceBB(Piece(BISHOP, !winning)));
+    int loosing_rook = GetBitCount(position.GetPieceBB(Piece(ROOK, !winning)));
+    int loosing_queen = GetBitCount(position.GetPieceBB(Piece(QUEEN, !winning)));
+    
+    int balance = winning_knight * 3 + winning_bishop * 3 + winning_rook * 5 + winning_queen * 9
+        - loosing_knight * 3 - loosing_bishop * 3 - loosing_rook * 5 - loosing_queen * 9;
+
+    if (balance < 4)
+        return true;
     return false;
 }
 
