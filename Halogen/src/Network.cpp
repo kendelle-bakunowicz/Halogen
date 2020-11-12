@@ -5,7 +5,7 @@ static const char* WeightsTXT[] = {
     ""
 };
 
-Network InitNetwork()
+Network* InitNetwork()
 {
     std::stringstream stream;
 
@@ -68,7 +68,7 @@ Network InitNetwork()
         }
     }
 
-    return Network(weights);
+    return new Network(weights);
 }
 
 template<size_t INPUT_COUNT>
@@ -88,7 +88,7 @@ Neuron<INPUT_COUNT>::Neuron(std::vector<int16_t> Weight, int16_t Bias) : weights
 }
 
 template<size_t INPUT_COUNT>
-int32_t Neuron<INPUT_COUNT>::FeedForward(std::array<int16_t, INPUT_COUNT>& input) const
+int32_t Neuron<INPUT_COUNT>::FeedForward(const std::array<int16_t, INPUT_COUNT>& input) const
 {
     int32_t ret = bias * PRECISION;
 
@@ -101,7 +101,7 @@ int32_t Neuron<INPUT_COUNT>::FeedForward(std::array<int16_t, INPUT_COUNT>& input
 }
 
 template<size_t INPUT_COUNT, size_t OUTPUT_COUNT>
-HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::HiddenLayer(std::vector<int16_t> inputs) : neurons(new std::array<Neuron<INPUT_COUNT>, OUTPUT_COUNT>), weightTranspose(new std::array<int16_t, INPUT_COUNT* OUTPUT_COUNT>)
+HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::HiddenLayer(std::vector<int16_t> inputs)
 {
     assert(inputs.size() % OUTPUT_COUNT == 0);
 
@@ -109,14 +109,14 @@ HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::HiddenLayer(std::vector<int16_t> inputs)
 
     for (size_t i = 0; i < OUTPUT_COUNT; i++)
     {
-        (*neurons)[i] = Neuron<INPUT_COUNT>(std::vector<int16_t>(inputs.begin() + (WeightsPerNeuron * i), inputs.begin() + (WeightsPerNeuron * i) + WeightsPerNeuron - 1), inputs.at(WeightsPerNeuron * (1 + i) - 1));
+        neurons[i] = Neuron<INPUT_COUNT>(std::vector<int16_t>(inputs.begin() + (WeightsPerNeuron * i), inputs.begin() + (WeightsPerNeuron * i) + WeightsPerNeuron - 1), inputs.at(WeightsPerNeuron * (1 + i) - 1));
     }
 
     for (size_t i = 0; i < WeightsPerNeuron - 1; i++)
     {
         for (size_t j = 0; j < OUTPUT_COUNT; j++)
         {
-            weightTranspose->at(i * OUTPUT_COUNT + j) = (neurons->at(j).weights.at(i));
+            weightTranspose[i * OUTPUT_COUNT + j] = neurons[j].weights[i];
         }
     }
 
@@ -124,43 +124,39 @@ HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::HiddenLayer(std::vector<int16_t> inputs)
 }
 
 template<size_t INPUT_COUNT, size_t OUTPUT_COUNT>
-std::array<int16_t, OUTPUT_COUNT> HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::FeedForward(std::array<int16_t, INPUT_COUNT>& input)
+void HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::FeedForward(std::array<int16_t, INPUT_COUNT>& input)
 {
-    for (size_t i = 0; i < neurons->size(); i++)
+    for (size_t i = 0; i < OUTPUT_COUNT; i++)
     {
-        zeta[i] = neurons->at(i).FeedForward(input);
+        zeta[i] = neurons[i].FeedForward(input);
     }
-
-    return zeta;
 }
 
 template<size_t INPUT_COUNT, size_t OUTPUT_COUNT>
-void HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::ApplyDelta(deltaArray& deltaVec)
+void HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::ApplyDelta(const deltaArray& deltaVec)
 {
     for (size_t point = 0; point < deltaVec.size; point++)
     {
-        int16_t deltaValue = deltaVec.deltas[point].delta; 
         size_t weightTransposeIndex = deltaVec.deltas[point].index * OUTPUT_COUNT;
 
-        if (deltaValue == 1)
+        if (deltaVec.deltas[point].delta == 1)
         {
             for (size_t neuron = 0; neuron < OUTPUT_COUNT; neuron++)
             {
-                zeta[neuron] += (*weightTranspose)[weightTransposeIndex + neuron];
+                zeta[neuron] += weightTranspose[weightTransposeIndex + neuron];
             }
         }
-
-        if (deltaValue == -1)
+        else
         {
             for (size_t neuron = 0; neuron < OUTPUT_COUNT; neuron++)
             {
-                zeta[neuron] -= (*weightTranspose)[weightTransposeIndex + neuron];
+                zeta[neuron] -= weightTranspose[weightTransposeIndex + neuron];
             }
         }
     }
 }
 
-Network::Network(const std::vector<std::vector<int16_t>>& inputs) : hiddenLayer(inputs[1]), outputNeuron(std::vector<int16_t>(inputs.back().begin(), inputs.back().end() - 1), inputs.back().back()), OldZeta()
+Network::Network(const std::vector<std::vector<int16_t>>& inputs) : hiddenLayer(inputs[1]), outputNeuron(std::vector<int16_t>(inputs.back().begin(), inputs.back().end() - 1), inputs.back().back()), OldZeta(), HiddenActivations()
 {
 }
 
@@ -176,7 +172,7 @@ void Network::RecalculateIncremental(std::array<int16_t, INPUT_NEURONS> inputs)
     hiddenLayer.FeedForward(inputs);
 }
 
-void Network::ApplyDelta(deltaArray& delta)
+void Network::ApplyDelta(const deltaArray& delta)
 {
     OldZeta[incrementalDepth++] = hiddenLayer.zeta;
     hiddenLayer.ApplyDelta(delta);
@@ -188,13 +184,11 @@ void Network::ApplyInverseDelta()
 }
 
 int16_t Network::QuickEval()
-{
-    std::array<int16_t, HIDDEN_NEURONS> inputs;
-    
+{  
     for (size_t i = 0; i < HIDDEN_NEURONS; i++)
     {
-        inputs[i] = std::max(int16_t(0), hiddenLayer.zeta[i]);
+        HiddenActivations[i] = std::max(int16_t(0), hiddenLayer.zeta[i]);
     }
 
-    return (outputNeuron.FeedForward(inputs) + HALF_PRECISION) / PRECISION;
+    return (outputNeuron.FeedForward(HiddenActivations) + HALF_PRECISION) / PRECISION;
 }
