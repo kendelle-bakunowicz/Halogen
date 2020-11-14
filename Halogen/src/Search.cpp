@@ -102,12 +102,13 @@ void InitSearch()
 {
 	KeepSearching = true;
 
+	int Futility_quadratic = 5;
 	int Futility_linear = 25;
 	int Futility_constant = 100;
 
 	for (int i = 0; i < MAX_DEPTH; i++)
 	{
-		FutilityMargins[i] = Futility_linear * i + Futility_constant;
+		FutilityMargins[i] = Futility_quadratic * i * i + Futility_linear * i + Futility_constant;
 	}
 }
 
