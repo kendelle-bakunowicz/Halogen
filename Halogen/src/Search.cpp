@@ -507,7 +507,8 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	if (hashMove.IsUninitialized() && depthRemaining > 3)
 		depthRemaining--;
 
-	bool FutileNode = staticScore + FutilityMargins[std::max<int>(0, depthRemaining)] < a;
+	//bool FutileNode = staticScore + FutilityMargins[std::max<int>(0, depthRemaining)] < a;
+	double FutilityCoeff = a - staticScore - FutilityMargins[std::max<int>(0, depthRemaining)];
 
 	for (size_t i = 0; i < moves.size(); i++)	
 	{
@@ -519,10 +520,13 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
 
 		//futility pruning
-		if (IsFutile(moves[i], beta, alpha, InCheck, position) && i > 0 && FutileNode)	//Possibly stop futility pruning if alpha or beta are close to mate scores
+		if (IsFutile(moves[i], beta, alpha, InCheck, position) && i > 0)	//Possibly stop futility pruning if alpha or beta are close to mate scores
 		{
-			position.RevertMove();
-			continue;
+			if (((position.GetNodes() * 709) % 1009) < 1009 / (1 + exp(-FutilityCoeff/200)))
+			{
+				position.RevertMove();
+				continue;
+			}
 		}
 
 		int extendedDepth = depthRemaining + extension(position, alpha, beta);
