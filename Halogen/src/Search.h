@@ -44,10 +44,11 @@ struct SearchData
 	SearchData();
 
 	std::vector<std::vector<Move>> PvTable;
-	std::vector<Killer> KillerMoves;							//2 moves indexed by distanceFromRoot
-	unsigned int HistoryMatrix[N_PLAYERS][N_SQUARES][N_SQUARES];			//first index is from square and 2nd index is to square
+	std::vector<Killer> KillerMoves;								//2 moves indexed by distanceFromRoot
+	unsigned int HistoryMatrix[N_PLAYERS][N_SQUARES][N_SQUARES];	//first index is from square and 2nd index is to square
 	EvalCacheTable evalTable;
 	SearchTimeManage timeManage;
+	int mateDepth = 0;												//for 'go mate X' commands
 
 	bool AbortSearch(size_t nodes);
 	bool ContinueSearch();
@@ -92,4 +93,5 @@ extern TranspositionTable tTable;
 Move MultithreadedSearch(const Position& position, unsigned int maxTimeMs, unsigned int AllocatedTimeMs, unsigned int threadCount = 1, int maxSearchDepth = MAX_DEPTH);
 uint64_t BenchSearch(const Position& position, int maxSearchDepth = MAX_DEPTH);
 void DepthSearch(const Position& position, int maxSearchDepth);
+void MateSearch(const Position& position, unsigned int maxTimeMs, int mate);
 

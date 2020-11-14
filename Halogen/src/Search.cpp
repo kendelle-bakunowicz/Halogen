@@ -33,7 +33,7 @@ unsigned int ProbeTBSearch(const Position& position);
 SearchResult UseSearchTBScore(unsigned int result, int staticEval);
 SearchResult UseRootTBScore(unsigned int result, int staticEval);
 
-void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned int threadID, int maxTime, int allocatedTimeMs, int maxSearchDepth = MAX_DEPTH, SearchData locals = SearchData());
+void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned int threadID, unsigned int maxTime, unsigned int allocatedTimeMs, unsigned int maxSearchDepth = MAX_DEPTH, SearchData locals = SearchData());
 SearchResult AspirationWindowSearch(Position& position, int depth, int prevScore, SearchData& locals, ThreadSharedData& sharedData, unsigned int threadID, Timer& searchTime);
 SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthRemaining, int alpha, int beta, int colour, unsigned int distanceFromRoot, bool allowedNull, SearchData& locals, ThreadSharedData& sharedData);
 void UpdateAlpha(int Score, int& a, std::vector<Move>& moves, const size_t& i, unsigned int distanceFromRoot, SearchData& locals);
@@ -75,6 +75,20 @@ uint64_t BenchSearch(const Position& position, int maxSearchDepth)
 	SearchPosition(position, sharedData, 0, 2147483647, 2147483647, maxSearchDepth);
 
 	return sharedData.getNodes();
+}
+
+void MateSearch(const Position& position, unsigned int maxTimeMs, int mate)
+{
+	if (maxTimeMs == 0)	//we haven't been given a maximum time -> search forever
+		maxTimeMs = UINT32_MAX;
+
+	InitSearch();
+	tTable.ResetTable();
+	ThreadSharedData sharedData(1);
+	SearchData locals;
+	locals.mateDepth = mate;
+	SearchPosition(position, sharedData, 0, maxTimeMs, maxTimeMs, MAX_DEPTH, locals);
+	PrintBestMove(sharedData.GetBestMove());
 }
 
 void DepthSearch(const Position& position, int maxSearchDepth)
@@ -280,7 +294,7 @@ void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int scor
 	std::cout << std::endl;
 }
 
-void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned int threadID, int maxTime, int allocatedTimeMs, int maxSearchDepth, SearchData locals)
+void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned int threadID, unsigned int maxTime, unsigned int allocatedTimeMs, unsigned int maxSearchDepth, SearchData locals)
 {
 	Timer searchTime;
 	searchTime.Start();
@@ -306,6 +320,8 @@ void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned in
 
 		sharedData.ReportResult(depth, searchTime.ElapsedMs(), score, alpha, beta, position, search.GetMove(), locals);
 		prevScore = score;
+
+		if (locals.mateDepth != 0 && (-Score::MateScore) - abs(score) <= 2 * locals.mateDepth) break;
 	}
 }
 

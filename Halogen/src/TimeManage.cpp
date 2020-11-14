@@ -54,7 +54,7 @@ bool SearchTimeManage::AbortSearch(uint64_t nodes)
 	return (!KeepSearching || CacheShouldStop);
 }
 
-void SearchTimeManage::StartSearch(int maxTime, int allocatedTime)
+void SearchTimeManage::StartSearch(unsigned int maxTime, unsigned int allocatedTime)
 {
 	timer.Restart();
 	timer.Start();
