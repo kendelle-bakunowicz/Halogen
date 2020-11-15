@@ -440,7 +440,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 
 		if (score >= beta)
 		{
-			if (initialDepth * 0.9 < depthRemaining)	//e.g. if we do a depth 30 search then the top 3 plys get verified.
+			if (initialDepth * 0.8 < depthRemaining)	//e.g. if we do a depth 30 search then the top 6 plys get verified. Note reductions mean its not 6 deep verifications on all branches
 			{
 				SearchResult result = NegaScout(position, initialDepth, depthRemaining - reduction - 1, beta - 1, beta, colour, distanceFromRoot, false, locals, sharedData);
 				if (result.GetScore() >= beta)
