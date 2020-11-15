@@ -439,7 +439,18 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		position.RevertNullMove();
 
 		if (score >= beta)
-			return beta;
+		{
+			if (initialDepth * 0.9 < depthRemaining)	//e.g. if we do a depth 30 search then the top 3 plys get verified.
+			{
+				SearchResult result = NegaScout(position, initialDepth, depthRemaining - reduction - 1, beta - 1, beta, colour, distanceFromRoot, false, locals, sharedData);
+				if (result.GetScore() >= beta)
+					return result;
+			}
+			else
+			{
+				return beta;
+			}
+		}
 	}
 
 	//mate distance pruning
