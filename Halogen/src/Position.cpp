@@ -240,7 +240,13 @@ void Position::StartingPosition()
 
 bool Position::InitialiseFromFen(std::vector<std::string> fen)
 {
-	if (fen.size() != 6)
+	if (fen.size() == 4)
+	{
+		fen.push_back("0");
+		fen.push_back("1");
+	}
+
+	if (fen.size() < 6)
 		return false;							//bad fen
 
 	if (!InitialiseBoardFromFen(fen))
@@ -429,7 +435,7 @@ std::array<int16_t, INPUT_NEURONS> Position::GetInputLayer() const
 
 			for (int sq = 0; sq < N_SQUARES; sq++)
 			{
-				ret[index++] = ((bb & SquareBB[sq]) != 0) << PRECISION_SHIFT;
+				ret[index++] = ((bb & SquareBB[sq]) != 0) * PRECISION;
 			}
 		}
 	}

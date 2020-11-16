@@ -1,6 +1,7 @@
 #include "Search.h"
 
-const std::vector<int> FutilityMargins = { 100, 150, 250, 400, 600 };
+constexpr unsigned int FutilityMaxDepth = 15;
+int FutilityMargins[FutilityMaxDepth];
 const unsigned int R = 3;					//Null-move reduction depth
 const unsigned int VariableNullDepth = 7;	//Beyond this depth R = 4
 
@@ -15,15 +16,15 @@ void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int scor
 void PrintBestMove(Move Best);
 bool UseTransposition(TTEntry& entry, int distanceFromRoot, int alpha, int beta);
 bool CheckForRep(Position& position, int distanceFromRoot);
-bool LMR(bool InCheck, const Position& position, int depthRemaining);
+bool LMR(bool InCheck, const Position& position);
 bool IsFutile(Move move, int beta, int alpha, bool InCheck, const Position& position);
-bool AllowedNull(bool allowedNull, const Position& position, int beta, int alpha, unsigned int depthRemaining);
+bool AllowedNull(bool allowedNull, const Position& position, int beta, int alpha);
 bool IsEndGame(const Position& position);
 bool IsPV(int beta, int alpha);
 void AddScoreToTable(int Score, int alphaOriginal, const Position& position, int depthRemaining, int distanceFromRoot, int beta, Move bestMove);
 void UpdateBounds(const TTEntry& entry, int& alpha, int& beta);
 int TerminalScore(const Position& position, int distanceFromRoot);
-int extension(Position & position, const Move& move, int alpha, int beta);
+int extension(Position & position, int alpha, int beta);
 Move GetHashMove(const Position& position, int depthRemaining, int distanceFromRoot);
 Move GetHashMove(const Position& position, int distanceFromRoot);
 void AddKiller(Move move, int distanceFromRoot, std::vector<Killer>& KillerMoves);
@@ -37,7 +38,7 @@ unsigned int ProbeTBSearch(const Position& position);
 SearchResult UseSearchTBScore(unsigned int result, int staticEval);
 SearchResult UseRootTBScore(unsigned int result, int staticEval);
 
-void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned int threadID, int maxTime, int allocatedTimeMs, int maxSearchDepth = MAX_DEPTH, SearchData locals = SearchData());
+void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned int threadID, int maxTime, int allocatedTimeMs, int maxSearchDepth = MAX_DEPTH, int mateScore =0, SearchData locals = SearchData());
 SearchResult AspirationWindowSearch(Position& position, int depth, int prevScore, SearchData& locals, ThreadSharedData& sharedData, unsigned int threadID, Timer& searchTime);
 SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthRemaining, int alpha, int beta, int colour, unsigned int distanceFromRoot, bool allowedNull, bool multiCut, SearchData& locals, ThreadSharedData& sharedData);
 void UpdateAlpha(int Score, int& a, std::vector<Move>& moves, const size_t& i, unsigned int distanceFromRoot, SearchData& locals);
@@ -58,7 +59,7 @@ Move MultithreadedSearch(const Position& position, unsigned int maxTimeMs, unsig
 
 	for (unsigned int i = 0; i < threadCount; i++)
 	{
-		threads.emplace_back(std::thread([=, &sharedData] {SearchPosition(position, sharedData, i, maxTimeMs, AllocatedTimeMs, maxSearchDepth ); }));
+		threads.emplace_back(std::thread([=, &sharedData] {SearchPosition(position, sharedData, i, maxTimeMs, AllocatedTimeMs, maxSearchDepth ); })); 
 	}
 
 	for (size_t i = 0; i < threads.size(); i++)
@@ -81,6 +82,18 @@ uint64_t BenchSearch(const Position& position, int maxSearchDepth)
 	return sharedData.getNodes();
 }
 
+void MateSearch(const Position& position, int searchTime, int mate)
+{
+	if (searchTime == 0)
+		searchTime = INT32_MAX;
+
+	InitSearch();
+	tTable.ResetTable();
+	ThreadSharedData sharedData(1);
+	SearchPosition(position, sharedData, 0, searchTime, searchTime, MAX_DEPTH, mate);
+	PrintBestMove(sharedData.GetBestMove());
+}
+
 void DepthSearch(const Position& position, int maxSearchDepth)
 {
 	InitSearch();
@@ -93,7 +106,14 @@ void DepthSearch(const Position& position, int maxSearchDepth)
 void InitSearch()
 {
 	KeepSearching = true;
-	tTable.ResetHitCount();
+
+	int Futility_linear = 25;
+	int Futility_constant = 100;
+
+	for (int i = 0; i < FutilityMaxDepth; i++)
+	{
+		FutilityMargins[i] = Futility_linear * i + Futility_constant;
+	}
 }
 
 void OrderMoves(std::vector<Move>& moves, Position& position, int distanceFromRoot, SearchData& locals)
@@ -263,7 +283,6 @@ void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int scor
 #if defined(_MSC_VER) && !defined(NDEBUG)  
 	std::cout	//these lines are for debug and not part of official uci protocol
 		<< " string thread " << std::this_thread::get_id()
-		<< " hashHitRate " << tTable.GetHitCount() * 1000 / std::max(sharedData.getNodes(), uint64_t(1))
 		<< " evalHitRate " << locals.evalTable.hits * 1000 / std::max(locals.evalTable.hits + locals.evalTable.misses, uint64_t(1));
 #endif
 
@@ -278,7 +297,7 @@ void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int scor
 	std::cout << std::endl;
 }
 
-void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned int threadID, int maxTime, int allocatedTimeMs, int maxSearchDepth, SearchData locals)
+void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned int threadID, int maxTime, int allocatedTimeMs, int maxSearchDepth, int mateScore, SearchData locals)
 {
 	Timer searchTime;
 	searchTime.Start();
@@ -304,6 +323,8 @@ void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned in
 
 		sharedData.ReportResult(depth, searchTime.ElapsedMs(), score, alpha, beta, position, search.GetMove(), locals);
 		prevScore = score;
+
+		if ((-Score::MateScore) - abs(score) <= 2 * mateScore) break;
 	}
 }
 
@@ -414,7 +435,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	int staticScore = colour * EvaluatePositionNet(position, locals.evalTable);
 
 	/*Null move pruning*/
-	if (AllowedNull(allowedNull, position, beta, alpha, depthRemaining) && (staticScore > beta))
+	if (AllowedNull(allowedNull, position, beta, alpha) && (staticScore > beta))
 	{
 		unsigned int reduction = R + (depthRemaining >= static_cast<int>(VariableNullDepth));
 
@@ -422,13 +443,18 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		int score = -NegaScout(position, initialDepth, depthRemaining - reduction - 1, -beta, -beta + 1, -colour, distanceFromRoot + 1, false, true, locals, sharedData).GetScore();
 		position.RevertNullMove();
 
-		//Verification search worth about ~5 elo. 
 		if (score >= beta)
 		{
-			SearchResult result = NegaScout(position, initialDepth, depthRemaining - reduction - 1, beta - 1, beta, colour, distanceFromRoot, false, true, locals, sharedData);
-
-			if (result.GetScore() >= beta)
-				return result;
+			if (beta < matedIn(MAX_DEPTH))	
+			{
+				SearchResult result = NegaScout(position, initialDepth, depthRemaining - reduction - 1, beta - 1, beta, colour, distanceFromRoot, false, true, locals, sharedData);
+				if (result.GetScore() >= beta)
+					return result;
+			}
+			else
+			{
+				return beta;
+			}
 		}
 	}
 
@@ -449,7 +475,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	{
 		position.ApplyMove(hashMove);
 		tTable.PreFetch(position.GetZobristKey());							//load the transposition into l1 cache. ~5% speedup
-		int extendedDepth = depthRemaining + extension(position, hashMove, alpha, beta);
+		int extendedDepth = depthRemaining + extension(position, alpha, beta);
 		int newScore = -NegaScout(position, initialDepth, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true, true, locals, sharedData).GetScore();
 		position.RevertMove();
 
@@ -513,7 +539,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	if (hashMove.IsUninitialized() && depthRemaining > 3)
 		depthRemaining--;
 
-	bool FutileNode = (depthRemaining < static_cast<int>(FutilityMargins.size()) && staticScore + FutilityMargins.at(std::max<int>(0, depthRemaining)) < a);
+	bool FutileNode = (depthRemaining < FutilityMaxDepth) && (staticScore + FutilityMargins[std::max<int>(0, depthRemaining)] < a);
 
 	for (size_t i = 0; i < moves.size(); i++)	
 	{
@@ -531,10 +557,10 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 			continue;
 		}
 
-		int extendedDepth = depthRemaining + extension(position, moves[i], alpha, beta);
+		int extendedDepth = depthRemaining + extension(position, alpha, beta);
 
 		//late move reductions
-		if (LMR(InCheck, position, depthRemaining) && i > 3)
+		if (LMR(InCheck, position) && i > 3)
 		{
 			int reduction = Reduction(depthRemaining, static_cast<int>(i), alpha, beta);
 			int score = -NegaScout(position, initialDepth, extendedDepth - 1 - reduction, -a - 1, -a, -colour, distanceFromRoot + 1, true, true, locals, sharedData).GetScore();
@@ -699,7 +725,6 @@ void UpdatePV(Move move, int distanceFromRoot, std::vector<std::vector<Move>>& P
 
 bool UseTransposition(TTEntry& entry, int distanceFromRoot, int alpha, int beta)
 {
-	tTable.AddHit();
 	entry.MateScoreAdjustment(distanceFromRoot);	//this MUST be done
 
 	if (entry.GetCutoff() == EntryType::EXACT) return true;
@@ -736,7 +761,7 @@ bool CheckForRep(Position& position, int distanceFromRoot)
 	return false;
 }
 
-int extension(Position& position, const Move& move, int alpha, int beta)
+int extension(Position& position, int alpha, int beta)
 {
 	int extension = 0;
 
@@ -749,12 +774,11 @@ int extension(Position& position, const Move& move, int alpha, int beta)
 	return extension;
 }
 
-bool LMR(bool InCheck, const Position& position, int depthRemaining)
+bool LMR(bool InCheck, const Position& position)
 {
-	return !InCheck 
+	return !InCheck
 		&& !IsEndGame(position)
-		&& !IsInCheck(position)
-		&& depthRemaining > 3;
+		&& !IsInCheck(position);
 }
 
 bool IsFutile(Move move, int beta, int alpha, bool InCheck, const Position& position)
@@ -766,13 +790,12 @@ bool IsFutile(Move move, int beta, int alpha, bool InCheck, const Position& posi
 		&& !IsInCheck(position);
 }
 
-bool AllowedNull(bool allowedNull, const Position& position, int beta, int alpha, unsigned int depthRemaining)
+bool AllowedNull(bool allowedNull, const Position& position, int beta, int alpha)
 {
 	return allowedNull
 		&& !IsSquareThreatened(position, position.GetKing(position.GetTurn()), position.GetTurn())
 		&& !IsPV(beta, alpha)
 		&& !IsEndGame(position)
-		&& depthRemaining > R + 1								//don't drop directly into quiessence search. particularly important in mate searches as quiessence search has no mate detection currently. See 5rk1/2p4p/2p4r/3P4/4p1b1/1Q2NqPp/PP3P1K/R4R2 b - - 0 1
 		&& GetBitCount(position.GetAllPieces()) >= 5;	//avoid null move pruning in very late game positions due to zanauag issues. Even with verification search e.g 8/6k1/8/8/8/8/1K6/Q7 w - - 0 1 
 }
 
@@ -914,9 +937,6 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 		if (Score >= beta)
 			break;
 	}
-
-	if (!locals.AbortSearch(position.GetNodes()) && !(sharedData.ThreadAbort(initialDepth)))
-		AddScoreToTable(Score, alpha, position, depthRemaining, distanceFromRoot, beta, bestmove);
 
 	return SearchResult(Score, bestmove);
 }
