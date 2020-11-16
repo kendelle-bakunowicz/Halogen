@@ -1,7 +1,7 @@
 #include "Network.h"
 
 static const char* WeightsTXT[] = {
-    #include "epoch170_b16384_quant128.nn"
+    #include "epoch170_b16384_quant64.nn"
     ""
 };
 
@@ -88,13 +88,26 @@ Neuron<INPUT_COUNT>::Neuron(std::vector<int16_t> Weight, int16_t Bias) : weights
 }
 
 template<size_t INPUT_COUNT>
-int32_t Neuron<INPUT_COUNT>::FeedForward(std::array<int16_t, INPUT_COUNT>& input) const
+int64_t Neuron<INPUT_COUNT>::FeedForward(std::array<int16_t, INPUT_COUNT>& input) const
 {
-    int32_t ret = bias * PRECISION;
+    int64_t ret = (int64_t)bias * PRECISION;
 
     for (size_t i = 0; i < INPUT_COUNT; i++)
     {
-        ret += input[i] * weights[i];
+        ret += (int64_t)(input[i]) * weights[i];
+    }
+
+    return (ret + HALF_PRECISION) / PRECISION;
+}
+
+template<size_t INPUT_COUNT>
+int64_t Neuron<INPUT_COUNT>::FeedForward(std::array<int32_t, INPUT_COUNT>& input) const
+{
+    int64_t ret = (int64_t)bias * PRECISION;
+
+    for (size_t i = 0; i < INPUT_COUNT; i++)
+    {
+        ret += (int64_t)(input[i]) * weights[i];
     }
 
     return (ret + HALF_PRECISION) / PRECISION;
@@ -124,7 +137,7 @@ HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::HiddenLayer(std::vector<int16_t> inputs)
 }
 
 template<size_t INPUT_COUNT, size_t OUTPUT_COUNT>
-std::array<int16_t, OUTPUT_COUNT> HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::FeedForward(std::array<int16_t, INPUT_COUNT>& input)
+std::array<int32_t, OUTPUT_COUNT> HiddenLayer<INPUT_COUNT, OUTPUT_COUNT>::FeedForward(std::array<int16_t, INPUT_COUNT>& input)
 {
     for (size_t i = 0; i < neurons->size(); i++)
     {
@@ -189,11 +202,11 @@ void Network::ApplyInverseDelta()
 
 int16_t Network::QuickEval()
 {
-    std::array<int16_t, HIDDEN_NEURONS> inputs;
+    std::array<int32_t, HIDDEN_NEURONS> inputs;
 
     for (size_t i = 0; i < HIDDEN_NEURONS; i++)
     {
-        inputs[i] = std::max(int16_t(0), hiddenLayer.zeta[i]);
+        inputs[i] = std::max(int32_t(0), hiddenLayer.zeta[i]);
     }
 
     return (outputNeuron.FeedForward(inputs) + HALF_PRECISION) / PRECISION;

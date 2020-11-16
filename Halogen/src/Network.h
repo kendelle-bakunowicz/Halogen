@@ -16,7 +16,7 @@
 constexpr size_t INPUT_NEURONS = 12 * 64;
 constexpr size_t HIDDEN_NEURONS = 256;
 
-constexpr int16_t MAX_VALUE = 128;
+constexpr int16_t MAX_VALUE = 64;
 constexpr int16_t PRECISION = ((size_t)std::numeric_limits<int16_t>::max() + 1) / MAX_VALUE;
 constexpr int16_t HALF_PRECISION = PRECISION / 2;
 
@@ -37,7 +37,8 @@ struct Neuron
 {
     Neuron();
     Neuron(std::vector<int16_t> Weight, int16_t Bias);
-    int32_t FeedForward(std::array<int16_t, INPUT_COUNT>& input) const;
+    int64_t FeedForward(std::array<int16_t, INPUT_COUNT>& input) const;
+    int64_t FeedForward(std::array<int32_t, INPUT_COUNT>& input) const;
 
     std::array<int16_t, INPUT_COUNT> weights;
     int16_t bias;
@@ -47,12 +48,12 @@ template<size_t INPUT_COUNT, size_t OUTPUT_COUNT>
 struct HiddenLayer
 {
     HiddenLayer(std::vector<int16_t> inputs);                                                                   // <for first neuron>: weight1, weight2, ..., weightN, bias, <next neuron etc...>
-    std::array<int16_t, OUTPUT_COUNT> FeedForward(std::array<int16_t, INPUT_COUNT>& input);
+    std::array<int32_t, OUTPUT_COUNT> FeedForward(std::array<int16_t, INPUT_COUNT>& input);
 
     void ApplyDelta(deltaArray& deltaVec);                                                         //incrementally update the connections between input layer and first hidden layer
 
     std::array<Neuron<INPUT_COUNT>, OUTPUT_COUNT>* neurons;
-    std::array<int16_t, OUTPUT_COUNT> zeta;
+    std::array<int32_t, OUTPUT_COUNT> zeta;
 
 private:
     std::array<int16_t, INPUT_COUNT * OUTPUT_COUNT>* weightTranspose;                                                                       //first neuron first weight, second neuron first weight etc...
@@ -73,7 +74,7 @@ private:
     HiddenLayer <INPUT_NEURONS, HIDDEN_NEURONS> hiddenLayer;
     Neuron<HIDDEN_NEURONS> outputNeuron;
 
-    std::array<std::array<int16_t, HIDDEN_NEURONS>, MAX_DEPTH>  OldZeta;
+    std::array<std::array<int32_t, HIDDEN_NEURONS>, MAX_DEPTH>  OldZeta;
     size_t incrementalDepth = 0;
 };
 
