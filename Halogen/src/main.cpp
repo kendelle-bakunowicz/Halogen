@@ -187,6 +187,16 @@ int main(int argc, char* argv[])
 		else if (token == "print") position.Print();
 		else if (token == "quit") return 0;
 		else if (token == "bench") Bench();
+
+		else if (token == "setvalue")
+		{
+			int value;
+			iss >> token; 
+			iss >> value;
+
+			if (token == "Futility_linear") Futility_linear = value;
+			if (token == "Futility_constant") Futility_constant = value;
+		}
 		
 		else cout << "Unknown command" << endl;
 	}

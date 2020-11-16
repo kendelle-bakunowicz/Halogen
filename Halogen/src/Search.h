@@ -12,6 +12,9 @@
 #include <thread>
 #include <cmath>
 
+extern int Futility_linear;
+extern int Futility_constant;
+
 struct SearchResult
 {
 	SearchResult(int score, Move move = Move()) : m_score(score), m_move(move) {}

@@ -1,5 +1,8 @@
 #include "Search.h"
 
+int Futility_linear = 25;
+int Futility_constant = 100;
+
 constexpr unsigned int FutilityMaxDepth = 15;
 int FutilityMargins[FutilityMaxDepth];
 const unsigned int R = 3;					//Null-move reduction depth
@@ -102,9 +105,6 @@ void DepthSearch(const Position& position, int maxSearchDepth)
 void InitSearch()
 {
 	KeepSearching = true;
-
-	int Futility_linear = 25;
-	int Futility_constant = 100;
 
 	for (int i = 0; i < FutilityMaxDepth; i++)
 	{
