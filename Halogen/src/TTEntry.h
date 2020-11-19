@@ -28,7 +28,7 @@ public:
 	Move GetMove() const { return Move(bestMove.data); }
 	char GetHalfMove() const { return halfmove; }
 
-	void SetHalfMove(int currenthalfmove, int distanceFromRoot) { halfmove = (currenthalfmove - distanceFromRoot) % (HALF_MOVE_MODULO); }	//halfmove is from current position, distanceFromRoot adjusts this to get what the halfmove was at the root of the search
+	void SetHalfMove(int currenthalfmove, int distanceFromRoot);	//halfmove is from current position, distanceFromRoot adjusts this to get what the halfmove was at the root of the search
 	void MateScoreAdjustment(int distanceFromRoot);
 
 	void Reset();

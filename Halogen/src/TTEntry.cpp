@@ -28,6 +28,13 @@ TTEntry::~TTEntry()
 {
 }
 
+void TTEntry::SetHalfMove(int currenthalfmove, int distanceFromRoot)
+{
+	char next = (currenthalfmove - distanceFromRoot) % (HALF_MOVE_MODULO);
+	if (next != halfmove)
+		halfmove = next;
+}
+
 void TTEntry::MateScoreAdjustment(int distanceFromRoot)
 {
 	if (GetScore() > 9000)	//checkmate node
