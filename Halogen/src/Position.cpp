@@ -91,7 +91,6 @@ void Position::ApplyMove(Move move)
 	UpdateCastleRights(move);
 	IncrementZobristKey(move);
 	ApplyDelta(CalculateMoveDelta(move), Zeta, incrementalDepth);
-	nodesSearched++;
 
 	/*if (GenerateZobristKey() != key)
 	{

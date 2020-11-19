@@ -20,6 +20,8 @@ This class holds all the data required to define a chess board position, as well
 class Position : public BoardParamiters, public BitBoard
 {
 public:
+	friend class ThreadSharedData;
+
 	Position();																									
 	~Position();
 
@@ -51,8 +53,7 @@ public:
 	int16_t GetEvaluation();
 
 	void addTbHit() { tbHits++; }
-	bool NodesSearchedAddToThreadTotal() { return (nodesSearched & NodeChunkMask) == 0; }
-	bool TbHitaddToThreadTotal() { return (tbHits & NodeChunkMask) == 0; }
+	void addNode() { nodesSearched++; }
 	size_t GetNodes() { return nodesSearched; }
 
 private:

@@ -66,11 +66,11 @@ public:
 	void ReportWantsToStop(unsigned int threadID);
 	int GetAspirationScore();
 	
-	uint64_t getTBHits() const { return tbHits; }
-	uint64_t getNodes() const { return nodes; }
+	uint64_t getTBHits() const;
+	uint64_t getNodes() const;
 
-	void AddNodeChunk() { nodes += NodeCountChunk; }
-	void AddTBHitChunk() { tbHits += NodeCountChunk; }
+	void LinkNodeCounter(Position& position, unsigned int ThreadID) { PositionNodeCounters[ThreadID] = &position.nodesSearched; }
+	void LinkTBHitCounter(Position& position, unsigned int ThreadID) { PositionTBHitCounters[ThreadID] = &position.tbHits; }
 
 private:
 	std::mutex ioMutex;
@@ -80,8 +80,8 @@ private:
 	int prevScore;									//if threads abandon the search, we need to know what the score was in order to set new alpha/beta bounds
 	bool noOutput;									//Do not write anything to the concole
 
-	std::atomic<uint64_t> tbHits;
-	std::atomic<uint64_t> nodes;
+	std::vector<uint64_t*> PositionNodeCounters;
+	std::vector<uint64_t*> PositionTBHitCounters;
 
 	std::vector<unsigned int> searchDepth;			//what depth is each thread currently searching?
 	std::vector<bool> ThreadWantsToStop;			//Threads signal here that they want to stop searching, but will keep going until all threads want to stop

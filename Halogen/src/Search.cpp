@@ -299,6 +299,8 @@ void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned in
 	searchTime.Start();
 
 	locals.timeManage.StartSearch(maxTime, allocatedTimeMs);
+	sharedData.LinkNodeCounter(position, threadID);
+	sharedData.LinkTBHitCounter(position, threadID);
 
 	int alpha = -30000;
 	int beta = 30000;
@@ -378,7 +380,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		if (result != TB_RESULT_FAILED)
 		{
 			position.addTbHit();
-			if (position.TbHitaddToThreadTotal()) sharedData.AddTBHitChunk();
 			return UseRootTBScore(result, colour * EvaluatePositionNet(position, locals.evalTable));
 		}
 	}
@@ -390,7 +391,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		if (result != TB_RESULT_FAILED)
 		{
 			position.addTbHit();
-			if (position.TbHitaddToThreadTotal()) sharedData.AddTBHitChunk();
 			return UseSearchTBScore(result, colour * EvaluatePositionNet(position, locals.evalTable));
 		}
 	}
@@ -475,8 +475,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		int newScore = -NegaScout(position, initialDepth, extendedDepth - 1, -b, -a, -colour, distanceFromRoot + 1, true, locals, sharedData).GetScore();
 		position.RevertMove();
 
-		if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
-
 		if (newScore > Score)
 		{
 			Score = newScore;
@@ -523,6 +521,8 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 
 	for (size_t i = 0; i < moves.size(); i++)	
 	{
+		position.addNode();
+
 		if (moves[i] == hashMove)
 			continue;
 
@@ -531,7 +531,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 			continue;
 
 		position.ApplyMove(moves.at(i));
-		if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
 		tTable.PreFetch(position.GetZobristKey());							//load the transposition into l1 cache. ~5% speedup
 		int extendedDepth = depthRemaining + extension(position, alpha, beta);
 
@@ -877,6 +876,8 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 
 	for (size_t i = 0; i < moves.size(); i++)
 	{
+		position.addNode();
+
 		int SEE = 0;
 		if (moves[i].GetFlag() == CAPTURE) //seeCapture doesn't work for ep or promotions
 		{
@@ -903,8 +904,6 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 		position.ApplyMove(moves.at(i));
 		int newScore = -Quiescence(position, initialDepth, -beta, -alpha, -colour, distanceFromRoot + 1, depthRemaining - 1, locals, sharedData).GetScore();
 		position.RevertMove();
-
-		if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
 
 		if (newScore > Score)
 		{
@@ -1001,13 +1000,13 @@ ThreadSharedData::ThreadSharedData(unsigned int threads, bool NoOutput) : curren
 	threadDepthCompleted = 0;
 	prevScore = 0;
 	noOutput = NoOutput;
-	tbHits = 0;
-	nodes = 0;
 
 	for (unsigned int i = 0; i < threads; i++)
 	{
 		searchDepth.push_back(0);
 		ThreadWantsToStop.push_back(false);
+		PositionNodeCounters.push_back(nullptr);
+		PositionTBHitCounters.push_back(nullptr);
 	}
 }
 
@@ -1065,4 +1064,26 @@ int ThreadSharedData::GetAspirationScore()
 {
 	std::lock_guard<std::mutex> lg(ioMutex);
 	return prevScore;
+}
+
+uint64_t ThreadSharedData::getTBHits() const
+{
+	uint64_t count = 0;
+	for (size_t i = 0; i < PositionTBHitCounters.size(); i++)
+	{
+		if (PositionTBHitCounters[i] != nullptr)
+			count += *PositionTBHitCounters[i];
+	}
+	return count;
+}
+
+uint64_t ThreadSharedData::getNodes() const
+{
+	uint64_t count = 0;
+	for (size_t i = 0; i < PositionNodeCounters.size(); i++)
+	{
+		if (PositionNodeCounters[i] != nullptr)
+			count += *PositionNodeCounters[i];
+	}
+	return count;
 }
