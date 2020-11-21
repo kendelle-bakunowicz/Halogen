@@ -37,8 +37,8 @@ SearchResult UseRootTBScore(unsigned int result, int staticEval);
 void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned int threadID, int maxTime, int allocatedTimeMs, int maxSearchDepth = MAX_DEPTH, int mateScore =0, SearchData locals = SearchData());
 SearchResult AspirationWindowSearch(Position& position, int depth, int prevScore, SearchData& locals, ThreadSharedData& sharedData, unsigned int threadID, Timer& searchTime);
 SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthRemaining, int alpha, int beta, int colour, unsigned int distanceFromRoot, bool allowedNull, SearchData& locals, ThreadSharedData& sharedData);
-void UpdateAlpha(int Score, int& a, std::vector<Move>& moves, const size_t& i, unsigned int distanceFromRoot, SearchData& locals);
-void UpdateScore(int newScore, int& Score, Move& bestMove, std::vector<Move>& moves, const size_t& i);
+void UpdateAlpha(int Score, int& a, unsigned int distanceFromRoot, SearchData& locals, Move bestMove);
+void UpdateScore(int newScore, int& Score, Move& bestMove, Move currentMove);
 SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha, int beta, int colour, unsigned int distanceFromRoot, int depthRemaining, SearchData& locals, ThreadSharedData& sharedData);
 
 int see(Position& position, int square, bool side);
@@ -477,17 +477,11 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 
 		if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
 
-		if (newScore > Score)
-		{
-			Score = newScore;
-			bestMove = hashMove;
-		}
+		//https://www.chessprogramming.org/PVS_and_Aspiration
+		if (distanceFromRoot == 0 && newScore <= alpha) return newScore;
 
-		if (Score > a)
-		{
-			a = Score;
-			UpdatePV(hashMove, distanceFromRoot, locals.PvTable);
-		}
+		UpdateScore(newScore, Score, bestMove, hashMove);
+		UpdateAlpha(Score, a, distanceFromRoot, locals, hashMove);
 
 		if (a >= beta) //Fail high cutoff
 		{
@@ -556,8 +550,8 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 
 		position.RevertMove();
 
-		UpdateScore(newScore, Score, bestMove, moves, i);
-		UpdateAlpha(Score, a, moves, i, distanceFromRoot, locals);
+		UpdateScore(newScore, Score, bestMove, moves[i]);
+		UpdateAlpha(Score, a, distanceFromRoot, locals, moves[i]);
 
 		if (a >= beta) //Fail high cutoff
 		{
@@ -663,21 +657,21 @@ SearchResult UseRootTBScore(unsigned int result, int staticEval)
 	return { score, move };
 }
 
-void UpdateAlpha(int Score, int& a, std::vector<Move>& moves, const size_t& i, unsigned int distanceFromRoot, SearchData& locals)
+void UpdateAlpha(int Score, int& a, unsigned int distanceFromRoot, SearchData& locals, Move bestMove)
 {
 	if (Score > a)
 	{
 		a = Score;
-		UpdatePV(moves.at(i), distanceFromRoot, locals.PvTable);
+		UpdatePV(bestMove, distanceFromRoot, locals.PvTable);
 	}
 }
 
-void UpdateScore(int newScore, int& Score, Move& bestMove, std::vector<Move>& moves, const size_t& i)
+void UpdateScore(int newScore, int& Score, Move& bestMove, Move currentMove)
 {
 	if (newScore > Score)
 	{
 		Score = newScore;
-		bestMove = moves.at(i);
+		bestMove = currentMove;
 	}
 }
 
