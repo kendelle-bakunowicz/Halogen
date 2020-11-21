@@ -103,7 +103,7 @@ void InitSearch()
 {
 	KeepSearching = true;
 
-	int Futility_linear = 25;
+	int Futility_linear = 40;
 	int Futility_constant = 100;
 
 	for (int i = 0; i < FutilityMaxDepth; i++)
