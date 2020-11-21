@@ -26,6 +26,7 @@ int EvaluatePositionNet(Position& position, EvalCacheTable& evalTable)
     }
 
     eval += position.GetTurn() == WHITE ? TEMPO : -TEMPO;
+    eval = eval * (100 - (int)position.GetFiftyMoveCount()) / 100;
     return std::min(4000, std::max(-4000, eval));
 }
 
