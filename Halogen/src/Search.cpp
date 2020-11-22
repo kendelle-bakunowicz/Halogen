@@ -34,7 +34,7 @@ unsigned int ProbeTBSearch(const Position& position);
 SearchResult UseSearchTBScore(unsigned int result, int staticEval);
 SearchResult UseRootTBScore(unsigned int result, int staticEval);
 
-void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned int threadID, int maxTime, int allocatedTimeMs, int maxSearchDepth = MAX_DEPTH, int mateScore =0, SearchData locals = SearchData());
+void SearchPosition(Position& position, ThreadSharedData& sharedData, unsigned int threadID, int maxTime, int allocatedTimeMs, int maxSearchDepth = MAX_DEPTH, int mateScore =0, SearchData locals = SearchData());
 SearchResult AspirationWindowSearch(Position& position, int depth, int prevScore, SearchData& locals, ThreadSharedData& sharedData, unsigned int threadID, Timer& searchTime);
 SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthRemaining, int alpha, int beta, int colour, unsigned int distanceFromRoot, bool allowedNull, SearchData& locals, ThreadSharedData& sharedData);
 void UpdateAlpha(int Score, int& a, std::vector<Move>& moves, const size_t& i, unsigned int distanceFromRoot, SearchData& locals);
@@ -51,11 +51,13 @@ Move MultithreadedSearch(const Position& position, unsigned int maxTimeMs, unsig
 	InitSearch();
 
 	std::vector<std::thread> threads;
+	std::vector<Position> positions;
 	ThreadSharedData sharedData(threadCount);
 
 	for (unsigned int i = 0; i < threadCount; i++)
 	{
-		threads.emplace_back(std::thread([=, &sharedData] {SearchPosition(position, sharedData, i, maxTimeMs, AllocatedTimeMs, maxSearchDepth ); })); 
+		positions.emplace_back(Position(position));
+		threads.emplace_back(std::thread([=, &positions, &sharedData] {SearchPosition(positions[i], sharedData, i, maxTimeMs, AllocatedTimeMs, maxSearchDepth ); }));
 	}
 
 	for (size_t i = 0; i < threads.size(); i++)
@@ -67,7 +69,7 @@ Move MultithreadedSearch(const Position& position, unsigned int maxTimeMs, unsig
 	return sharedData.GetBestMove();
 }
 
-uint64_t BenchSearch(const Position& position, int maxSearchDepth)
+uint64_t BenchSearch(Position& position, int maxSearchDepth)
 {
 	InitSearch();
 	tTable.ResetTable();
@@ -78,7 +80,7 @@ uint64_t BenchSearch(const Position& position, int maxSearchDepth)
 	return sharedData.getNodes();
 }
 
-void MateSearch(const Position& position, int searchTime, int mate)
+void MateSearch(Position& position, int searchTime, int mate)
 {
 	if (searchTime == 0)
 		searchTime = INT32_MAX;
@@ -90,7 +92,7 @@ void MateSearch(const Position& position, int searchTime, int mate)
 	PrintBestMove(sharedData.GetBestMove());
 }
 
-void DepthSearch(const Position& position, int maxSearchDepth)
+void DepthSearch(Position& position, int maxSearchDepth)
 {
 	InitSearch();
 	tTable.ResetTable();
@@ -293,12 +295,14 @@ void PrintSearchInfo(unsigned int depth, double Time, bool isCheckmate, int scor
 	std::cout << std::endl;
 }
 
-void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned int threadID, int maxTime, int allocatedTimeMs, int maxSearchDepth, int mateScore, SearchData locals)
+void SearchPosition(Position& position, ThreadSharedData& sharedData, unsigned int threadID, int maxTime, int allocatedTimeMs, int maxSearchDepth, int mateScore, SearchData locals)
 {
 	Timer searchTime;
 	searchTime.Start();
 
 	locals.timeManage.StartSearch(maxTime, allocatedTimeMs);
+	sharedData.LinkPositionNodes(position.GetNodePtr(), threadID);
+	sharedData.LinkPositionTBHits(position.GetTBHitPtr(), threadID);
 
 	int alpha = -30000;
 	int beta = 30000;
@@ -362,7 +366,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 #endif 
 
 	locals.PvTable[distanceFromRoot].clear();
-	if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
 
 	if (initialDepth > 1 && locals.AbortSearch(position.GetNodes())) return -1;										//we must check later that we don't let this score pollute the transposition table
 	if (sharedData.ThreadAbort(initialDepth)) return -1;												//another thread has finished searching this depth: ABORT!
@@ -379,7 +382,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		if (result != TB_RESULT_FAILED)
 		{
 			position.addTbHit();
-			if (position.TbHitaddToThreadTotal()) sharedData.AddTBHitChunk();
 			return UseRootTBScore(result, colour * EvaluatePositionNet(position, locals.evalTable));
 		}
 	}
@@ -391,7 +393,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		if (result != TB_RESULT_FAILED)
 		{
 			position.addTbHit();
-			if (position.TbHitaddToThreadTotal()) sharedData.AddTBHitChunk();
 			return UseSearchTBScore(result, colour * EvaluatePositionNet(position, locals.evalTable));
 		}
 	}
@@ -842,7 +843,6 @@ int mateIn(int distanceFromRoot)
 SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha, int beta, int colour, unsigned int distanceFromRoot, int depthRemaining, SearchData& locals, ThreadSharedData& sharedData)
 {
 	locals.PvTable[distanceFromRoot].clear();
-	if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
 
 	if (initialDepth > 1 && locals.AbortSearch(position.GetNodes())) return -1;
 	if (sharedData.ThreadAbort(initialDepth)) return -1;									//another thread has finished searching this depth: ABORT!
@@ -1003,13 +1003,13 @@ ThreadSharedData::ThreadSharedData(unsigned int threads, bool NoOutput) : curren
 	threadDepthCompleted = 0;
 	prevScore = 0;
 	noOutput = NoOutput;
-	tbHits = 0;
-	nodes = 0;
 
 	for (unsigned int i = 0; i < threads; i++)
 	{
 		searchDepth.push_back(0);
 		ThreadWantsToStop.push_back(false);
+		positionNodeCounters.push_back(nullptr);
+		positionTBHitCounters.push_back(nullptr);
 	}
 }
 
@@ -1067,4 +1067,30 @@ int ThreadSharedData::GetAspirationScore()
 {
 	std::lock_guard<std::mutex> lg(ioMutex);
 	return prevScore;
+}
+
+uint64_t ThreadSharedData::getTBHits() const
+{
+	uint64_t count = 0;
+
+	for (int i = 0; i < positionTBHitCounters.size(); i++)
+	{
+		if (positionTBHitCounters[i] != nullptr)
+			count += *positionTBHitCounters[i];
+	}
+
+	return count;
+}
+
+uint64_t ThreadSharedData::getNodes() const
+{
+	uint64_t count = 0;
+
+	for (int i = 0; i < positionNodeCounters.size(); i++)
+	{
+		if (positionNodeCounters[i] != nullptr)
+			count += *positionNodeCounters[i];
+	}
+
+	return count;
 }

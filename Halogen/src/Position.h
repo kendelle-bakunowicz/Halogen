@@ -55,6 +55,9 @@ public:
 	bool TbHitaddToThreadTotal();
 	size_t GetNodes() { return nodesSearched; }
 
+	size_t* GetNodePtr() { return &nodesSearched; }
+	size_t* GetTBHitPtr() { return &tbHits; }
+
 private:
 	size_t nodesSearched;
 	size_t tbHits;

@@ -66,11 +66,11 @@ public:
 	void ReportWantsToStop(unsigned int threadID);
 	int GetAspirationScore();
 	
-	uint64_t getTBHits() const { return tbHits; }
-	uint64_t getNodes() const { return nodes; }
+	uint64_t getTBHits() const;
+	uint64_t getNodes() const;
 
-	void AddNodeChunk() { nodes += NodeCountChunk; }
-	void AddTBHitChunk() { tbHits += NodeCountChunk; }
+	void LinkPositionNodes(uint64_t* count, unsigned int ThreadID) { positionNodeCounters[ThreadID] = count; }
+	void LinkPositionTBHits(uint64_t* count, unsigned int ThreadID) { positionTBHitCounters[ThreadID] = count; }
 
 private:
 	std::mutex ioMutex;
@@ -80,8 +80,8 @@ private:
 	int prevScore;									//if threads abandon the search, we need to know what the score was in order to set new alpha/beta bounds
 	bool noOutput;									//Do not write anything to the concole
 
-	std::atomic<uint64_t> tbHits;
-	std::atomic<uint64_t> nodes;
+	std::vector<uint64_t*> positionNodeCounters;
+	std::vector<uint64_t*> positionTBHitCounters;
 
 	std::vector<unsigned int> searchDepth;			//what depth is each thread currently searching?
 	std::vector<bool> ThreadWantsToStop;			//Threads signal here that they want to stop searching, but will keep going until all threads want to stop
@@ -90,7 +90,7 @@ private:
 extern TranspositionTable tTable;
 
 Move MultithreadedSearch(const Position& position, unsigned int maxTimeMs, unsigned int AllocatedTimeMs, unsigned int threadCount = 1, int maxSearchDepth = MAX_DEPTH);
-uint64_t BenchSearch(const Position& position, int maxSearchDepth = MAX_DEPTH);
-void DepthSearch(const Position& position, int maxSearchDepth);
-void MateSearch(const Position& position, int searchTime, int mate);
+uint64_t BenchSearch(Position& position, int maxSearchDepth = MAX_DEPTH);
+void DepthSearch(Position& position, int maxSearchDepth);
+void MateSearch(Position& position, int searchTime, int mate);
 
