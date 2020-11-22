@@ -3,7 +3,7 @@
 int pieceValueVector[N_STAGES][N_PIECE_TYPES] = { {91, 532, 568, 715, 1279, 5000},
                                                   {111, 339, 372, 638, 1301, 5000} };
 
-constexpr int TEMPO = 10;
+constexpr int TEMPO = 15;
 
 uint64_t SimpleZobristKey(Position& position)
 {
