@@ -41,48 +41,64 @@ void NetworkInit()
     delete[] OutputBias;
 }
 
-void RecalculateIncremental(std::array<int16_t, INPUT_NEURONS> inputs, std::array<std::array<int16_t, HIDDEN_NEURONS>, MAX_DEPTH>& Zeta, size_t& incrementalDepth)
+void RecalculateIncremental(std::array<int16_t, INPUT_NEURONS> inputs, std::array<deltaArray, MAX_DEPTH>& deltaStack, size_t& deltaIndex, std::array<std::array<int16_t, HIDDEN_NEURONS>, MAX_DEPTH>& zetaStack, size_t& zetaIndex)
 {
-    incrementalDepth = 0;
+    zetaIndex = 0;
+    deltaIndex = 0;
 
     for (size_t i = 0; i < MAX_DEPTH; i++)
-        Zeta[i] = {};
+        deltaStack[i] = {};
+
+    for (size_t i = 0; i < MAX_DEPTH; i++)
+        zetaStack[i] = {};
 
     for (size_t i = 0; i < HIDDEN_NEURONS; i++)
-        Zeta[0][i] = (*hiddenBias)[i];
+        zetaStack[0][i] = (*hiddenBias)[i];
 
     for (size_t i = 0; i < HIDDEN_NEURONS; i++)
         for (size_t j = 0; j < INPUT_NEURONS; j++)
-            Zeta[0][i] += inputs[j] * (*hiddenWeights)[j][i];
+            zetaStack[0][i] += inputs[j] * (*hiddenWeights)[j][i];
 }
 
-void ApplyDelta(deltaArray& update, std::array<std::array<int16_t, HIDDEN_NEURONS>, MAX_DEPTH>& Zeta, size_t& incrementalDepth)
+void ApplyDelta(deltaArray& newDelta, std::array<deltaArray, MAX_DEPTH>& deltaStack, size_t& deltaIndex)
 {
-    incrementalDepth++;
-    Zeta[incrementalDepth] = Zeta[incrementalDepth - 1];
+    deltaStack[++deltaIndex] = newDelta;
+}
 
-    for (size_t i = 0; i < update.size; i++)
+void ApplyInverseDelta(size_t& deltaIndex, size_t& zetaIndex)
+{
+    if (deltaIndex > 0)
+        deltaIndex--;
+    else
+        zetaIndex--;
+}
+
+void ApplyIncrementalUpdate(deltaArray& update, std::array<std::array<int16_t, HIDDEN_NEURONS>, MAX_DEPTH>& zetaStack, size_t& zetaIndex)
+{
+    zetaIndex++;
+    zetaStack[zetaIndex] = zetaStack[zetaIndex - 1];
+
+    for (int8_t i = 0; i < update.size; i++)
     {
         if (update.deltas[i].delta == 1)
             for (size_t j = 0; j < HIDDEN_NEURONS; j++)
-                Zeta[incrementalDepth][j] += (*hiddenWeights)[update.deltas[i].index][j];
+                zetaStack[zetaIndex][j] += (*hiddenWeights)[update.deltas[i].index][j];
         else
             for (size_t j = 0; j < HIDDEN_NEURONS; j++)
-                Zeta[incrementalDepth][j] -= (*hiddenWeights)[update.deltas[i].index][j];
+                zetaStack[zetaIndex][j] -= (*hiddenWeights)[update.deltas[i].index][j];
     }
 }
 
-void ApplyInverseDelta(size_t& incrementalDepth)
+int16_t QuickEval(std::array<deltaArray, MAX_DEPTH>& deltaStack, size_t& deltaIndex, std::array<std::array<int16_t, HIDDEN_NEURONS>, MAX_DEPTH>& zetaStack, size_t& zetaIndex)
 {
-    --incrementalDepth;
-}
+    for (size_t index = 1; index <= deltaIndex; index++)
+        ApplyIncrementalUpdate(deltaStack[index], zetaStack, zetaIndex);
+    deltaIndex = 0;
 
-int16_t QuickEval(const std::array<std::array<int16_t, HIDDEN_NEURONS>, MAX_DEPTH>& Zeta, const size_t& incrementalDepth)
-{
     int32_t output = (*outputBias) * PRECISION;
 
     for (size_t i = 0; i < HIDDEN_NEURONS; i++)
-        output += std::max(int16_t(0), Zeta[incrementalDepth][i]) * (*outputWeights)[i];
+        output += std::max(int16_t(0), zetaStack[zetaIndex][i]) * (*outputWeights)[i];
 
     return output / SQUARE_PRECISION;
 }
