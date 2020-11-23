@@ -44,8 +44,8 @@ public:
 	uint64_t GetPreviousKey(size_t index);
 
 	/*Seriously, don't use these functions outside of static exchange evaluation*/
-	void ApplyMoveQuick(Move move);	//does ApplyMove functionality but much quicker.
-	void RevertMoveQuick();			//does RevertMove functionality but much quicker.
+	void ApplyQuickCapture(Move move);	//does ApplyMove functionality but much quicker. For captures
+	void RevertMoveQuick();				//does RevertMove functionality but much quicker.
 
 	int16_t GetEvaluation();
 

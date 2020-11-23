@@ -107,6 +107,14 @@ BitBoardData BitBoard::GetPreviousBoard()
 	return previousBoards.back();
 }
 
+void BitBoard::TogglePieceSquare(unsigned int piece, unsigned int square)
+{
+	assert(square < N_SQUARES);
+	assert(piece < N_PIECES);
+
+	m_Bitboard[piece] ^= SquareBB[square];
+}
+
 bool BitBoard::IsEmpty(unsigned int square) const
 {
 	assert(square < N_SQUARES);

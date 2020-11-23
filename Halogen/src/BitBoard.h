@@ -48,6 +48,8 @@ protected:
 
 	BitBoardData GetPreviousBoard();
 
+	void TogglePieceSquare(unsigned int piece, unsigned int square);
+
 private:
 	std::vector<BitBoardData> previousBoards;
 };

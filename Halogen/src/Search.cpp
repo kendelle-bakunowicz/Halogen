@@ -209,7 +209,7 @@ int see(Position& position, int square, bool side)
 	{
 		int captureValue = PieceValues(position.GetSquare(capture.GetTo()));
 
-		position.ApplyMoveQuick(capture);
+		position.ApplyQuickCapture(capture);
 		value = std::max(0, captureValue - see(position, square, !side));	// Do not consider captures if they lose material, therefor max zero 
 		position.RevertMoveQuick();
 	}
@@ -226,7 +226,7 @@ int seeCapture(Position& position, const Move& move)
 	int value = 0;
 	int captureValue = PieceValues(position.GetSquare(move.GetTo()));
 
-	position.ApplyMoveQuick(move);
+	position.ApplyQuickCapture(move);
 	value = captureValue - see(position, move.GetTo(), !side);
 	position.RevertMoveQuick();
 
@@ -761,7 +761,7 @@ bool LMR(bool InCheck, const Position& position)
 
 bool FutilityMoveGivesCheck(Position& position, Move move)
 {
-	position.ApplyMoveQuick(move);
+	position.ApplyQuickCapture(move);
 	bool ret = IsInCheck(position, !position.GetTurn());	//ApplyMoveQuick does not change whos turn it is
 	position.RevertMoveQuick();
 	return ret;

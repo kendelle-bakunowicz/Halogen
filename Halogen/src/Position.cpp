@@ -518,12 +518,18 @@ size_t Position::modifier(size_t index)
 	}
 }
 
-void Position::ApplyMoveQuick(Move move)
+void Position::ApplyQuickCapture(Move move)
 {
+	assert(move.GetFlag() != EN_PASSANT);
+	assert(!move.IsPromotion());
+
 	SaveBoard();
 
-	SetSquare(move.GetTo(), GetSquare(move.GetFrom()));
-	ClearSquare(move.GetFrom());
+	if (move.IsCapture())
+		TogglePieceSquare(GetSquare(move.GetTo()), move.GetTo());
+	unsigned int piece = GetSquare(move.GetFrom());
+	TogglePieceSquare(piece, move.GetFrom());
+	TogglePieceSquare(piece, move.GetTo());
 }
 
 void Position::RevertMoveQuick()
