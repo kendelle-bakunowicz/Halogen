@@ -46,6 +46,12 @@ void TTEntry::Reset()
 	halfmove = -1;
 }
 
+int8_t TTEntry::CalculateHashScore(int8_t currentGeneration)
+{
+	int8_t age = currentGeneration - GetHalfMove();
+	return GetDepth() - 4 * (age >= 0 ? age : age + 16);
+}
+
 void TTBucket::Reset()
 {
 	entry[0].Reset();

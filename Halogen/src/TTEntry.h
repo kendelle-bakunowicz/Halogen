@@ -27,6 +27,7 @@ public:
 	void Reset();
 
 	static uint8_t CalculateHalfMove(int currenthalfmove, int distanceFromRoot) { return (currenthalfmove - distanceFromRoot) % (HALF_MOVE_MODULO); }
+	int8_t CalculateHashScore(int8_t currentGeneration);
 
 	uint64_t GetKey() const { return key; }
 	int GetScore() const { return score; }

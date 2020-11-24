@@ -46,16 +46,11 @@ void TranspositionTable::AddEntry(const Move& best, uint64_t ZobristKey, int Sco
 	}
 
 	int8_t currentAge = TTEntry::CalculateHalfMove(Turncount, distanceFromRoot);	//Keep in mind age from each generation goes up so lower (generally) means older
-	int8_t age;
 
-	age = currentAge - table[hash].entry[0].GetHalfMove();
-	int8_t score1 = table[hash].entry[0].GetDepth() - 4 * (age >= 0 ? age : age + 16);
-	age = currentAge - table[hash].entry[1].GetHalfMove();
-	int8_t score2 = table[hash].entry[1].GetDepth() - 4 * (age >= 0 ? age : age + 16);
-	age = currentAge - table[hash].entry[2].GetHalfMove();
-	int8_t score3 = table[hash].entry[2].GetDepth() - 4 * (age >= 0 ? age : age + 16);
-	age = currentAge - table[hash].entry[3].GetHalfMove();
-	int8_t score4 = table[hash].entry[3].GetDepth() - 4 * (age >= 0 ? age : age + 16);
+	int8_t score1 = table[hash].entry[0].CalculateHashScore(currentAge);
+	int8_t score2 = table[hash].entry[1].CalculateHashScore(currentAge);
+	int8_t score3 = table[hash].entry[2].CalculateHashScore(currentAge);
+	int8_t score4 = table[hash].entry[3].CalculateHashScore(currentAge);
 
 	int8_t lowest = score1;
 	lowest = std::min(lowest, score2);
