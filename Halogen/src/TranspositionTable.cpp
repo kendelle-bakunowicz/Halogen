@@ -38,7 +38,7 @@ void TranspositionTable::AddEntry(const Move& best, uint64_t ZobristKey, int Sco
 
 	for (int i = 0; i < 4; i++)
 	{
-		if (table[hash].entry[i].GetKey() == EMPTY || table[hash].entry[i].GetKey() == ZobristKey)
+		if (table[hash].entry[i].GetKey() == EMPTY || (table[hash].entry[i].GetKey() == ZobristKey && table[hash].entry[i].GetDepth() <= Depth))
 		{
 			table[hash].entry[i] = TTEntry(best, ZobristKey, Score, Depth, Turncount, distanceFromRoot, Cutoff);
 			return;
