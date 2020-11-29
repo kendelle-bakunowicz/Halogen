@@ -60,7 +60,11 @@ public:
 	~ThreadSharedData();
 
 	Move GetBestMove();
-	bool ThreadAbort(unsigned int initialDepth) const;
+
+	bool ThreadDepthAbort(unsigned int initialDepth) const;
+	bool ThreadFailLowAbort(unsigned int initialDepth, int aspirationAlpha) const;
+	bool ThreadFailHighAbort(unsigned int initialDepth, int aspirationBeta) const;
+
 	void ReportResult(unsigned int depth, double Time, int score, int alpha, int beta, const Position& position, Move move, const SearchData& locals);
 	void ReportDepth(unsigned int depth, unsigned int threadID);
 	void ReportWantsToStop(unsigned int threadID);
