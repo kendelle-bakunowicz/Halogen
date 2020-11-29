@@ -982,6 +982,8 @@ ThreadSharedData::ThreadSharedData(unsigned int threads, bool NoOutput) : curren
 {
 	threadCount = threads;
 	threadDepthCompleted = 0;
+	lowestAlpha = 0;
+	highestBeta = 0;
 	prevScore = 0;
 	noOutput = NoOutput;
 	tbHits = 0;
