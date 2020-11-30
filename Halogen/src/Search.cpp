@@ -367,13 +367,13 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	if (position.NodesSearchedAddToThreadTotal()) sharedData.AddNodeChunk();
 	position.ReportDepth(distanceFromRoot);
 
-	if (initialDepth > 1 && locals.AbortSearch(position.GetNodes())) return -1;										//we must check later that we don't let this score pollute the transposition table
+	if (initialDepth > 1 && locals.AbortSearch(position.GetNodes())) return -1;							//we must check later that we don't let this score pollute the transposition table
 	if (sharedData.ThreadAbort(initialDepth)) return -1;												//another thread has finished searching this depth: ABORT!
 	if (distanceFromRoot >= MAX_DEPTH) return 0;														//If we are 100 moves from root I think we can assume its a drawn position
 
 	//check for draw
 	if (DeadPosition(position)) return 0;
-	if (CheckForRep(position, distanceFromRoot)) return 0;
+	if (CheckForRep(position, distanceFromRoot)) return position.GetNodes() & 1;						//by psudo-randomly evaluating draws differently the engine explores different lines each time which helps
 
 	if (distanceFromRoot == 0 && GetBitCount(position.GetAllPieces()) <= TB_LARGEST)
 	{
