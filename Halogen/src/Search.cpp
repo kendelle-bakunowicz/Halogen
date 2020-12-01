@@ -426,7 +426,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	/*Null move pruning*/
 	if (AllowedNull(allowedNull, position, beta, alpha, InCheck) && (staticScore > beta))
 	{
-		int reduction = 4 + depthRemaining / 4;
+		int reduction = 4 + depthRemaining / 8;
 
 		position.ApplyNullMove();
 		int score = -NegaScout(position, initialDepth, depthRemaining - reduction - 1, -beta, -beta + 1, -colour, distanceFromRoot + 1, false, locals, sharedData).GetScore();
