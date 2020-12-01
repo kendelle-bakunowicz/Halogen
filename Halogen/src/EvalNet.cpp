@@ -28,7 +28,7 @@ int EvaluatePositionNet(Position& position, EvalCacheTable& evalTable)
         if (eval < 0 && position.GetPieceBB(PAWN, BLACK) == 0)
             eval /= 2;
 
-        eval = eval / 4 * 4;
+        eval = eval / 2 * 2;
 
         evalTable.AddEntry(key, eval);
     }
