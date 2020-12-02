@@ -2,8 +2,8 @@
 
 /*Search constants*/
 
-double LMR_constant = 0.5;
-double LMR_coeff    = 0.5;
+double LMR_constant = -1.35;
+double LMR_coeff    = 0.87;
 
 unsigned int R = 3;					//Null-move reduction depth
 unsigned int VariableNullDepth = 7;	//Beyond this depth R = 4
