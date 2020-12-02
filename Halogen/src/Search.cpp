@@ -2,8 +2,8 @@
 
 constexpr int FutilityMaxDepth = 10;
 int FutilityMargins[FutilityMaxDepth];
-const unsigned int R = 3;					//Null-move reduction depth
-const unsigned int VariableNullDepth = 7;	//Beyond this depth R = 4
+const int R = 3;					//Null-move reduction depth
+const int VariableNullDepth = 7;	//Beyond this depth R = 4
 
 TranspositionTable tTable;
 
@@ -426,9 +426,15 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	if (depthRemaining == 1 && staticScore - 200 >= beta && !InCheck && !IsPV(beta, alpha)) return beta;
 
 	/*Null move pruning*/
-	if (AllowedNull(allowedNull, position, beta, alpha, InCheck) && (staticScore > beta))
+	if (   staticScore > beta 
+		&& allowedNull 
+		&& !InCheck 
+		&& depthRemaining >= 3
+		&& !IsPV(beta, alpha) 
+		&& !IsEndGame(position)
+		&& GetBitCount(position.GetAllPieces()) >= 5)
 	{
-		unsigned int reduction = R + (depthRemaining >= static_cast<int>(VariableNullDepth));
+		int reduction = R + (depthRemaining >= VariableNullDepth);
 
 		position.ApplyNullMove();
 		int score = -NegaScout(position, initialDepth, depthRemaining - reduction - 1, -beta, -beta + 1, -colour, distanceFromRoot + 1, false, locals, sharedData).GetScore();
