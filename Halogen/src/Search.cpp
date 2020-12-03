@@ -426,7 +426,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	if (depthRemaining == 1 && staticScore - 200 >= beta && !InCheck && !IsPV(beta, alpha)) return beta;
 
 	/*Null move pruning*/
-	if (AllowedNull(allowedNull, position, beta, alpha, InCheck) && (staticScore > beta))
+	if (AllowedNull(allowedNull, position, beta, alpha, InCheck) && (staticScore > beta)) 
 	{
 		unsigned int reduction = R + (depthRemaining >= static_cast<int>(VariableNullDepth));
 
