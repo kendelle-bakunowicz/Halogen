@@ -423,7 +423,11 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 
 	int staticScore = colour * EvaluatePositionNet(position, locals.evalTable);
 
-	if (depthRemaining == 1 && staticScore - 200 >= beta && !InCheck && !IsPV(beta, alpha)) return beta;
+	/*Static null pruning*/
+	if (   depthRemaining <= 6 
+		&& staticScore - 250 * depthRemaining >= beta 
+		&& !InCheck 
+		&& !IsPV(beta, alpha)) return beta;
 
 	/*Null move pruning*/
 	if (AllowedNull(allowedNull, position, beta, alpha, InCheck) && (staticScore > beta))
