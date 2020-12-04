@@ -10,6 +10,9 @@ unsigned int VariableNullDepth = 7;	//Beyond this depth R = 4
 
 constexpr int FutilityMaxDepth = 10;
 
+int static_null_depth = 6;
+int static_null_coeff = 250;
+
 /*----------------*/
 
 int FutilityMargins[FutilityMaxDepth];		//[depth]
@@ -442,8 +445,8 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	int staticScore = colour * EvaluatePositionNet(position, locals.evalTable); 
 
 	/*Static null pruning*/
-	if (   depthRemaining <= 6 
-		&& staticScore - 250 * depthRemaining >= beta 
+	if (   depthRemaining <= static_null_depth 
+		&& staticScore - static_null_coeff * depthRemaining >= beta 
 		&& !InCheck 
 		&& !IsPV(beta, alpha)) return beta;
 

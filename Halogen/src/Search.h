@@ -17,7 +17,8 @@
 
 extern double LMR_constant;
 extern double LMR_coeff;
-
+extern int static_null_depth;
+extern int static_null_coeff;
 
 /*----------------*/
 

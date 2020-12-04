@@ -190,6 +190,20 @@ int main(int argc, char* argv[])
 				iss >> token;
 				LMR_coeff = stod(token);
 			}
+			
+			else if (token == "static_null_depth")
+			{
+				iss >> token; //'value'
+				iss >> token;
+				static_null_depth = stoi(token);
+			}
+
+			else if (token == "static_null_coeff")
+			{
+				iss >> token; //'value'
+				iss >> token;
+				static_null_coeff = stoi(token);
+			}
 		}
 
 		else if (token == "perft")
