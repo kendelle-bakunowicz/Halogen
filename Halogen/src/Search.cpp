@@ -444,7 +444,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	if (depthRemaining == 1 && staticScore - 200 >= beta && !InCheck && !IsPV(beta, alpha)) return beta;
 
 	/*Null move pruning*/
-	if (AllowedNull(allowedNull, position, beta, alpha, InCheck) && (staticScore > beta))
+	if (AllowedNull(allowedNull, position, beta, alpha, InCheck) && (staticScore > beta) && depthRemaining >= 2)
 	{
 		unsigned int reduction = R + (depthRemaining >= static_cast<int>(VariableNullDepth));
 
@@ -549,7 +549,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		int extendedDepth = depthRemaining + extension(position, alpha, beta);
 
 		//late move reductions
-		if (LMR(InCheck, position) && i > 3)
+		if (LMR(InCheck, position) && i > 3 && depthRemaining >= 2)
 		{
 			int reduction = Reduction(depthRemaining, static_cast<int>(i), alpha, beta);
 			int score = -NegaScout(position, initialDepth, extendedDepth - 1 - reduction, -a - 1, -a, -colour, distanceFromRoot + 1, true, locals, sharedData).GetScore();
