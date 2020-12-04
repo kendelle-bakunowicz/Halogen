@@ -10,8 +10,8 @@ unsigned int VariableNullDepth = 7;	//Beyond this depth R = 4
 
 constexpr int FutilityMaxDepth = 10;
 
-int static_null_depth = 6;
-int static_null_coeff = 250;
+int static_null_depth = 9;
+int static_null_coeff = 400;
 
 /*----------------*/
 
