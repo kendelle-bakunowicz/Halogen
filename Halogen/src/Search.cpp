@@ -556,12 +556,16 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		if (LMR(InCheck, position) && i > 3)
 		{
 			int reduction = Reduction(depthRemaining, static_cast<int>(i), alpha, beta);
-			int score = -NegaScout(position, initialDepth, extendedDepth - 1 - reduction, -a - 1, -a, -colour, distanceFromRoot + 1, true, locals, sharedData).GetScore();
 
-			if (score <= a)
+			if (reduction > 0)
 			{
-				position.RevertMove();
-				continue;
+				int score = -NegaScout(position, initialDepth, extendedDepth - 1 - reduction, -a - 1, -a, -colour, distanceFromRoot + 1, true, locals, sharedData).GetScore();
+
+				if (score <= a)
+				{
+					position.RevertMove();
+					continue;
+				}
 			}
 		}
 
