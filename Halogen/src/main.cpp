@@ -191,6 +191,20 @@ int main(int argc, char* argv[])
 				LMR_coeff = stod(token);
 			}
 
+			else if (token == "LMR_PV_mul")
+			{
+				iss >> token; //'value'
+				iss >> token;
+				LMR_PV_mul = stod(token);
+			}
+
+			else if (token == "LMR_non_quiet_mul")
+			{
+				iss >> token; //'value'
+				iss >> token;
+				LMR_non_quiet_mul = stod(token);
+			}
+
 			else if (token == "Null_constant")
 			{
 				iss >> token; //'value'

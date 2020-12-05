@@ -4,6 +4,8 @@
 
 double LMR_constant = -1.26;
 double LMR_coeff    =  0.84;
+double LMR_PV_mul = 0.8;
+double LMR_non_quiet_mul = 0.8;
 
 int Null_constant = 4;
 int Null_depth_quotent = 6;
@@ -20,7 +22,7 @@ int Delta_margin = 200;
 
 constexpr int FutilityMaxDepth = 10;
 int FutilityMargins[FutilityMaxDepth];		//[depth]
-int LMR_reduction[64][64] = {};				//[depth][move number]
+int LMR_reduction[2][2][64][64] = {};		//[Is Pv?][Is capture or promotion?][depth][move number]
 
 TranspositionTable tTable;
 
@@ -43,7 +45,7 @@ Move GetHashMove(const Position& position, int distanceFromRoot);
 void AddKiller(Move move, int distanceFromRoot, std::vector<Killer>& KillerMoves);
 void AddHistory(const Move& move, int depthRemaining, unsigned int (&HistoryMatrix)[N_PLAYERS][N_SQUARES][N_SQUARES], bool sideToMove);
 void UpdatePV(Move move, int distanceFromRoot, std::vector<std::vector<Move>>& PvTable);
-int Reduction(int depth, int i, int alpha, int beta);
+int Reduction(int depth, int i, int alpha, int beta, Move move);
 int matedIn(int distanceFromRoot);
 int mateIn(int distanceFromRoot);
 unsigned int ProbeTBRoot(const Position& position);
@@ -129,7 +131,10 @@ void InitSearch()
 	{
 		for (int j = 0; j < 64; j++)
 		{
-			LMR_reduction[i][j] = std::round(LMR_constant + LMR_coeff * log(i + 1) * log(j + 1));
+			LMR_reduction[false][false][i][j] = std::round(LMR_constant + LMR_coeff * log(i + 1) * log(j + 1));
+			LMR_reduction[true][false][i][j]  = std::round((LMR_constant + LMR_coeff * log(i + 1) * log(j + 1)) * LMR_PV_mul);
+			LMR_reduction[false][true][i][j]  = std::round((LMR_constant + LMR_coeff * log(i + 1) * log(j + 1)) * LMR_non_quiet_mul);
+			LMR_reduction[true][true][i][j]   = std::round((LMR_constant + LMR_coeff * log(i + 1) * log(j + 1)) * LMR_PV_mul * LMR_non_quiet_mul);
 		}
 	}
 }
@@ -555,7 +560,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		//late move reductions
 		if (LMR(InCheck, position) && i > 3)
 		{
-			int reduction = Reduction(depthRemaining, static_cast<int>(i), alpha, beta);
+			int reduction = Reduction(depthRemaining, static_cast<int>(i), alpha, beta, moves[i]);
 			int score = -NegaScout(position, initialDepth, extendedDepth - 1 - reduction, -a - 1, -a, -colour, distanceFromRoot + 1, true, locals, sharedData).GetScore();
 
 			if (score <= a)
@@ -698,9 +703,9 @@ void UpdateScore(int newScore, int& Score, Move& bestMove, std::vector<Move>& mo
 	}
 }
 
-int Reduction(int depth, int i, int alpha, int beta)
+int Reduction(int depth, int i, int alpha, int beta, Move move)
 {
-	return LMR_reduction[std::min(63, std::max(0, depth))][std::min(63, std::max(0, i))];
+	return LMR_reduction[IsPV(beta, alpha)][move.IsCapture() || move.IsPromotion()][std::min(63, std::max(0, depth))][std::min(63, std::max(0, i))];
 }
 
 void UpdatePV(Move move, int distanceFromRoot, std::vector<std::vector<Move>>& PvTable)

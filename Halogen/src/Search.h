@@ -16,6 +16,8 @@
 
 extern double LMR_constant;
 extern double LMR_coeff;
+extern double LMR_PV_mul;
+extern double LMR_non_quiet_mul;
 
 extern int Null_constant;				
 extern int Null_depth_quotent;				
