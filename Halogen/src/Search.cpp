@@ -4,8 +4,8 @@
 
 double LMR_constant = -1.26;
 double LMR_coeff    =  0.84;
-double LMR_PV_mul = 0.8;
-double LMR_non_quiet_mul = 0.8;
+double LMR_PV_mul = 0.96;
+double LMR_non_quiet_mul = 0.65;
 
 int Null_constant = 4;
 int Null_depth_quotent = 6;
