@@ -348,8 +348,8 @@ void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned in
 
 SearchResult AspirationWindowSearch(Position& position, int depth, int prevScore, SearchData& locals, ThreadSharedData& sharedData, unsigned int threadID, Timer& searchTime)
 {
-	int alpha = prevScore - std::max(1, Aspiration_window + ((threadID % 2 == 0) ? 1 : -1) * int(4.0 * log2(threadID + 1)));
-	int beta = prevScore + std::max(1, Aspiration_window + ((threadID % 2 == 0) ? 1 : -1) * int(4.0 * log2(threadID + 1)));
+	int alpha = prevScore - Aspiration_window;
+	int beta = prevScore + Aspiration_window;
 	SearchResult search = { 0 };
 
 	while (!locals.AbortSearch(0) || depth == 1)
