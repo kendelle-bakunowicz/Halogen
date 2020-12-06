@@ -395,7 +395,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 
 	//check for draw
 	if (DeadPosition(position)) return 0;
-	if (CheckForRep(position, distanceFromRoot)) return 0;
+	if (CheckForRep(position, distanceFromRoot)) return -24;
 
 	if (distanceFromRoot == 0 && GetBitCount(position.GetAllPieces()) <= TB_LARGEST)
 	{
