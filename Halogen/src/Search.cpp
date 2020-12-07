@@ -337,7 +337,6 @@ void SearchPosition(Position position, ThreadSharedData& sharedData, unsigned in
 		int score = search.GetScore();
 
 		if (depth > 1 && locals.AbortSearch(0)) break;
-		if (sharedData.ThreadAbort(depth)) { score = sharedData.GetAspirationScore(); }
 
 		sharedData.ReportResult(depth, searchTime.ElapsedMs(), score, alpha, beta, position, search.GetMove(), locals);
 		prevScore = score;
@@ -352,25 +351,43 @@ SearchResult AspirationWindowSearch(Position& position, int depth, int prevScore
 	int beta = prevScore + std::max(1, Aspiration_window + ((threadID % 2 == 0) ? 1 : -1) * int(4.0 * log2(threadID + 1)));
 	SearchResult search = { 0 };
 
-	while (!locals.AbortSearch(0) || depth == 1)
+	int failHighCounter = 0;
+	int failLowCounter = 0;
+	int adjustedDepth = depth;
+
+	while (!locals.AbortSearch(0) || adjustedDepth == 1)
 	{
+		bool completedDepth = false;
+
 		position.ResetSeldepth();
-		search = NegaScout(position, depth, depth, alpha, beta, position.GetTurn() ? 1 : -1, 0, false, locals, sharedData);
-		if (alpha < search.GetScore() && search.GetScore() < beta) break;
-		if (sharedData.ThreadAbort(depth)) break;
-		if (depth > 1 && locals.AbortSearch(0)) break; 
+		search = NegaScout(position, adjustedDepth, adjustedDepth, alpha, beta, position.GetTurn() ? 1 : -1, 0, false, locals, sharedData);
+		if (alpha < search.GetScore() && search.GetScore() < beta && adjustedDepth == depth) break;
+		if (alpha < search.GetScore() && search.GetScore() < beta) completedDepth = true;
+
+		if (adjustedDepth > 1 && locals.AbortSearch(0)) break;
 
 		if (search.GetScore() <= alpha)
 		{
-			sharedData.ReportResult(depth, searchTime.ElapsedMs(), alpha, alpha, beta, position, search.GetMove(), locals);
+			sharedData.ReportResult(adjustedDepth, searchTime.ElapsedMs(), alpha, alpha, beta, position, search.GetMove(), locals);
 			alpha = std::max(int(LowINF), prevScore - abs(prevScore - alpha) * 4);
+
+			failLowCounter++;
+			if (failLowCounter % 2 == 0 && adjustedDepth > 10)
+				adjustedDepth--;
 		}
 
 		if (search.GetScore() >= beta)
 		{
-			sharedData.ReportResult(depth, searchTime.ElapsedMs(), beta, alpha, beta, position, search.GetMove(), locals);
+			sharedData.ReportResult(adjustedDepth, searchTime.ElapsedMs(), beta, alpha, beta, position, search.GetMove(), locals);
 			beta = std::min(int(HighINF), prevScore + abs(prevScore - beta) * 4);
+
+			failHighCounter++;
+			if (failHighCounter % 2 == 0 && adjustedDepth > 10)
+				adjustedDepth--;
 		}
+
+		if (completedDepth)
+			adjustedDepth++;
 	} 
 
 	return search;
@@ -390,7 +407,6 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 	position.ReportDepth(distanceFromRoot);
 
 	if (initialDepth > 1 && locals.AbortSearch(position.GetNodes())) return -1;										//we must check later that we don't let this score pollute the transposition table
-	if (sharedData.ThreadAbort(initialDepth)) return -1;												//another thread has finished searching this depth: ABORT!
 	if (distanceFromRoot >= MAX_DEPTH) return 0;														//If we are 100 moves from root I think we can assume its a drawn position
 
 	//check for draw
@@ -510,7 +526,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 			AddKiller(hashMove, distanceFromRoot, locals.KillerMoves);
 			AddHistory(hashMove, depthRemaining, locals.HistoryMatrix, position.GetTurn());
 
-			if (!locals.AbortSearch(position.GetNodes()) && !(sharedData.ThreadAbort(initialDepth)))
+			if (!locals.AbortSearch(position.GetNodes()))
 				AddScoreToTable(Score, alpha, position, depthRemaining, distanceFromRoot, beta, bestMove);
 
 			return SearchResult(Score, bestMove);
@@ -586,7 +602,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 		b = a + 1;				//Set a new zero width window
 	}
 
-	if (!locals.AbortSearch(position.GetNodes()) && !sharedData.ThreadAbort(initialDepth))
+	if (!locals.AbortSearch(position.GetNodes()))
 		AddScoreToTable(Score, alpha, position, depthRemaining, distanceFromRoot, beta, bestMove);
 
 	return SearchResult(Score, bestMove);
@@ -842,7 +858,6 @@ SearchResult Quiescence(Position& position, unsigned int initialDepth, int alpha
 	position.ReportDepth(distanceFromRoot);
 
 	if (initialDepth > 1 && locals.AbortSearch(position.GetNodes())) return -1;
-	if (sharedData.ThreadAbort(initialDepth)) return -1;									//another thread has finished searching this depth: ABORT!
 	if (distanceFromRoot >= MAX_DEPTH) return 0;								//If we are 100 moves from root I think we can assume its a drawn position
 
 	std::vector<Move> moves;
@@ -1031,7 +1046,7 @@ void ThreadSharedData::ReportResult(unsigned int depth, double Time, int score, 
 {
 	std::lock_guard<std::mutex> lg(ioMutex);
 
-	if (alpha < score && score < beta && threadDepthCompleted < depth)
+	if (alpha < score && score < beta)
 	{
 		if (!noOutput)
 			PrintSearchInfo(depth, Time, abs(score) > 9000, score, alpha, beta, position, move, locals, *this);
@@ -1043,13 +1058,13 @@ void ThreadSharedData::ReportResult(unsigned int depth, double Time, int score, 
 		highestBeta = score;
 	}
 
-	if (score < lowestAlpha && score <= alpha && !noOutput && Time > 5000 && threadDepthCompleted == depth - 1)
+	if (score < lowestAlpha && score <= alpha && !noOutput)
 	{
 		PrintSearchInfo(depth, Time, abs(score) > 9000, score, alpha, beta, position, move, locals, *this);
 		lowestAlpha = alpha;
 	}
 
-	if (score > highestBeta && score >= beta && !noOutput && Time > 5000 && threadDepthCompleted == depth - 1)
+	if (score > highestBeta && score >= beta && !noOutput)
 	{
 		PrintSearchInfo(depth, Time, abs(score) > 9000, score, alpha, beta, position, move, locals, *this);
 		highestBeta = beta;
