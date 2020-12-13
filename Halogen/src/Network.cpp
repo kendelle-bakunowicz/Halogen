@@ -1,5 +1,5 @@
 #include "Network.h"
-#include "epoch40_embedded.nn"
+#include "epoch60_embedded.nn"
 
 std::array<std::array<int16_t, HIDDEN_NEURONS>, INPUT_NEURONS>* hiddenWeights;
 std::array<int16_t, HIDDEN_NEURONS>* hiddenBias;
