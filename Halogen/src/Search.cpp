@@ -538,7 +538,7 @@ SearchResult NegaScout(Position& position, unsigned int initialDepth, int depthR
 
 	if (hashMove.IsUninitialized() && depthRemaining > 3)
 		depthRemaining--;
-
+	 
 	bool FutileNode = (depthRemaining < FutilityMaxDepth) && (staticScore + FutilityMargins[std::max<int>(0, depthRemaining)] < a);
 
 	for (size_t i = 0; i < moves.size(); i++)	
