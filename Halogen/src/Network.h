@@ -14,7 +14,8 @@
 #include "BitBoardDefine.h"
 
 constexpr size_t INPUT_NEURONS = 12 * 64;
-constexpr size_t HIDDEN_NEURONS = 256;
+constexpr size_t HIDDEN_NEURONS_1 = 256;
+constexpr size_t HIDDEN_NEURONS_2 = 32;
 
 constexpr int16_t MAX_VALUE = 128;
 constexpr int16_t PRECISION = ((size_t)std::numeric_limits<int16_t>::max() + 1) / MAX_VALUE;
@@ -34,14 +35,9 @@ struct deltaArray
     deltaPoint deltas[4];
 };
 
-extern std::array<std::array<int16_t, HIDDEN_NEURONS>, INPUT_NEURONS>* hiddenWeights;
-extern std::array<int16_t, HIDDEN_NEURONS>* hiddenBias;
-extern std::array<int16_t, HIDDEN_NEURONS>* outputWeights;
-extern int16_t* outputBias;
-
-void RecalculateIncremental(std::array<int16_t, INPUT_NEURONS> inputs, std::array<std::array<int16_t, HIDDEN_NEURONS>, MAX_DEPTH + 1>& Zeta, size_t& incrementalDepth);
-void ApplyDelta(deltaArray& update, std::array<std::array<int16_t, HIDDEN_NEURONS>, MAX_DEPTH + 1>& Zeta, size_t& incrementalDepth);     //incrementally update the connections between input layer and first hidden layer
+void RecalculateIncremental(std::array<int16_t, INPUT_NEURONS> inputs, std::array<std::array<int16_t, HIDDEN_NEURONS_1>, MAX_DEPTH + 1>& Zeta, size_t& incrementalDepth);
+void ApplyDelta(deltaArray& update, std::array<std::array<int16_t, HIDDEN_NEURONS_1>, MAX_DEPTH + 1>& Zeta, size_t& incrementalDepth);     //incrementally update the connections between input layer and first hidden layer
 void ApplyInverseDelta(size_t& incrementalDepth);                                                                                   //for un-make moves
-int16_t QuickEval(const std::array<std::array<int16_t, HIDDEN_NEURONS>, MAX_DEPTH + 1>& Zeta, const size_t& incrementalDepth);          //when used with above, this just calculates starting from the alpha of first hidden layer and skips input -> hidden
+int16_t QuickEval(const std::array<std::array<int16_t, HIDDEN_NEURONS_1>, MAX_DEPTH + 1>& Zeta, const size_t& incrementalDepth);          //when used with above, this just calculates starting from the alpha of first hidden layer and skips input -> hidden
 
 void NetworkInit();
