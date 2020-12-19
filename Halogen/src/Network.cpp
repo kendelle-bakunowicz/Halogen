@@ -1,5 +1,5 @@
 #include "Network.h"
-#include "halogen-256-32-795B3F89.nn"
+#include "halogen-256-32-9DAE362C.nn"
 
 std::array<std::array<int16_t, HIDDEN_NEURONS_1>, INPUT_NEURONS>* hiddenWeights1;
 std::array<int16_t, HIDDEN_NEURONS_1>* hiddenBias1;
