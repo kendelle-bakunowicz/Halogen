@@ -30,12 +30,25 @@ void TempoAdjustment(int& eval, Position& position)
     eval += position.GetTurn() == WHITE ? TEMPO : -TEMPO;
 }
 
+int MaterialBalance(const Position& position)
+{
+    int materialBalance = 0;
+
+    for (int i = KNIGHT; i < QUEEN; i++)
+    {
+        materialBalance += PieceValues(Piece(i, WHITE), ENDGAME) * GetBitCount(position.GetPieceBB(Piece(static_cast<PieceTypes>(i), WHITE)));
+        materialBalance -= PieceValues(Piece(i, BLACK), ENDGAME) * GetBitCount(position.GetPieceBB(Piece(static_cast<PieceTypes>(i), BLACK)));
+    }
+
+    return materialBalance;
+}
+
 void NoPawnAdjustment(int& eval, Position& position)
 {
-    if (eval > 0 && position.GetPieceBB(PAWN, WHITE) == 0)
-        eval /= 2;
-    if (eval < 0 && position.GetPieceBB(PAWN, BLACK) == 0)
-        eval /= 2;
+    //If the winning side has no pawns and is not ahead by at least 400 points, its drawish
+    if ((eval > 0 && position.GetPieceBB(PAWN, WHITE) == 0) || (eval < 0 && position.GetPieceBB(PAWN, BLACK) == 0))
+        if (abs(MaterialBalance(position)) < 400)
+            eval /= 2;
 }
 
 void NetworkScaleAdjustment(int& eval)
