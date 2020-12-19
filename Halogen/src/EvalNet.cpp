@@ -34,10 +34,10 @@ int MaterialBalance(const Position& position)
 {
     int materialBalance = 0;
 
-    for (int i = KNIGHT; i < QUEEN; i++)
+    for (int i = KNIGHT; i <= QUEEN; i++)
     {
-        materialBalance += PieceValues(Piece(i, WHITE), ENDGAME) * GetBitCount(position.GetPieceBB(Piece(static_cast<PieceTypes>(i), WHITE)));
-        materialBalance -= PieceValues(Piece(i, BLACK), ENDGAME) * GetBitCount(position.GetPieceBB(Piece(static_cast<PieceTypes>(i), BLACK)));
+        materialBalance += pieceValueVector[ENDGAME][i] * GetBitCount(position.GetPieceBB(Piece(static_cast<PieceTypes>(i), WHITE)));
+        materialBalance -= pieceValueVector[ENDGAME][i] * GetBitCount(position.GetPieceBB(Piece(static_cast<PieceTypes>(i), BLACK)));
     }
 
     return materialBalance;
