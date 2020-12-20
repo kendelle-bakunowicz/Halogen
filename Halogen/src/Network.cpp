@@ -4,6 +4,7 @@
 std::array<std::array<int16_t, HIDDEN_NEURONS_1>, INPUT_NEURONS>* hiddenWeights1;
 std::array<int16_t, HIDDEN_NEURONS_1>* hiddenBias1;
 std::array<std::array<int16_t, HIDDEN_NEURONS_2>, HIDDEN_NEURONS_1>* hiddenWeights2;
+std::array<std::array<int16_t, HIDDEN_NEURONS_1>, HIDDEN_NEURONS_2>* hiddenWeights2_transpose;
 std::array<int16_t, HIDDEN_NEURONS_2>* hiddenBias2;
 std::array<int16_t, HIDDEN_NEURONS_2>* outputWeights;
 int16_t* outputBias;
@@ -13,6 +14,7 @@ void NetworkInit()
     hiddenWeights1 = new std::array<std::array<int16_t, HIDDEN_NEURONS_1>, INPUT_NEURONS>;
     hiddenBias1    = new std::array<int16_t, HIDDEN_NEURONS_1>;
     hiddenWeights2 = new std::array<std::array<int16_t, HIDDEN_NEURONS_2>, HIDDEN_NEURONS_1>;
+    hiddenWeights2_transpose = new std::array<std::array<int16_t, HIDDEN_NEURONS_1>, HIDDEN_NEURONS_2>;
     hiddenBias2    = new std::array<int16_t, HIDDEN_NEURONS_2>;
     outputWeights  = new std::array<int16_t, HIDDEN_NEURONS_2>;
     outputBias     = new int16_t;
@@ -53,6 +55,10 @@ void NetworkInit()
     for (size_t i = 0; i < HIDDEN_NEURONS_1; i++)
         for (size_t j = 0; j < HIDDEN_NEURONS_2; j++)
             (*hiddenWeights2)[i][j] = (int16_t)round(HiddenWeights2[i * HIDDEN_NEURONS_2 + j] * PRECISION);
+
+    for (size_t i = 0; i < HIDDEN_NEURONS_1; i++)
+        for (size_t j = 0; j < HIDDEN_NEURONS_2; j++)
+            (*hiddenWeights2_transpose)[j][i] = (int16_t)round(HiddenWeights2[i * HIDDEN_NEURONS_2 + j] * PRECISION);
 
     for (size_t i = 0; i < HIDDEN_NEURONS_2; i++)
         (*hiddenBias2)[i] = (int16_t)round(HiddenBias2[i] * PRECISION);
@@ -116,7 +122,10 @@ int16_t QuickEval(const std::array<std::array<int16_t, HIDDEN_NEURONS_1>, MAX_DE
 
     for (size_t i = 0; i < HIDDEN_NEURONS_2; i++)
         for (size_t j = 0; j < HIDDEN_NEURONS_1; j++)
-            Zeta2[i] += std::max(int16_t(0), Zeta[incrementalDepth][j]) * (*hiddenWeights2)[j][i] / PRECISION;  //ReLU done here
+            Zeta2[i] += std::max(int16_t(0), Zeta[incrementalDepth][j]) * (*hiddenWeights2_transpose)[i][j];  //ReLU done here
+
+    for (size_t i = 0; i < HIDDEN_NEURONS_2; i++)
+        Zeta2[i] /= PRECISION;
 
     //Calculate the output weighted input
     int32_t output = (*outputBias) * PRECISION;
