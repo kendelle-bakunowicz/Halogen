@@ -14,7 +14,7 @@ int Futility_constant = 100;
 
 int Aspiration_window = 15;
 
-int Delta_margin = 200;
+int Delta_margin = 180;
 
 /*----------------*/
 
