@@ -10,8 +10,6 @@ uint64_t DiagonalBB[N_DIAGONALS];
 uint64_t AntiDiagonalBB[N_ANTI_DIAGONALS];
 
 uint64_t betweenArray[64][64];
-uint64_t PassedPawnMaskWhite[N_SQUARES];
-uint64_t PassedPawnMaskBlack[N_SQUARES];
 
 uint64_t RookAttacks[N_SQUARES];
 uint64_t KnightAttacks[N_SQUARES];
@@ -20,9 +18,6 @@ uint64_t QueenAttacks[N_SQUARES];
 uint64_t KingAttacks[N_SQUARES];
 uint64_t WhitePawnAttacks[N_SQUARES];
 uint64_t BlackPawnAttacks[N_SQUARES];
-
-uint64_t allBitsBelow[N_SQUARES];
-uint64_t allBitsAbove[N_SQUARES];
 
 bool HASH_ENABLE = true;
 
@@ -41,6 +36,15 @@ Players operator!(const Players& val)
 {
 	return val == WHITE ? BLACK : WHITE;
 }
+
+//--------------------------------------------------------------------------
+//Below code adapted with permission from Terje, author of Weiss.
+
+uint64_t BishopAttacksMagic[0x1480];
+uint64_t RookAttacksMagic[0x19000];
+void InitSliderAttacks(Magic m[64], uint64_t* table, const int steps[4]);
+
+//--------------------------------------------------------------------------
 
 void BBInit()
 {
@@ -114,38 +118,12 @@ void BBInit()
 
 	for (int i = 0; i < 64; i++)
 	{
-		for (int j = 0; j < i; j++)
-		{
-			allBitsBelow[i] |= SquareBB[j];
-		}
-	}
-
-	for (int i = 0; i < 64; i++)
-	{
-		for (int j = 63; j > i; j--)
-		{
-			allBitsAbove[i] |= SquareBB[j];
-		}
-	}
-
-	for (int i = 0; i < 64; i++)
-	{
-		PassedPawnMaskWhite[i] = EMPTY;
-		PassedPawnMaskBlack[i] = EMPTY;
 		KingAttacks[i] = EMPTY;
 		WhitePawnAttacks[i] = EMPTY;
 		BlackPawnAttacks[i] = EMPTY;
 
 		for (int j = 0; j < 64; j++)
 		{
-			if (AbsFileDiff(i, j) <= 1)													//adjacent files or same file
-			{
-				if (GetRank(j) > GetRank(i))											//Ahead of i
-					PassedPawnMaskWhite[i] ^= SquareBB[j];
-				if (GetRank(j) < GetRank(i))											//behind of i
-					PassedPawnMaskBlack[i] ^= SquareBB[j];
-			}
-
 			if (AbsFileDiff(i, j) <= 1 && AbsRankDiff(i, j) <= 1)
 			{
 				if (i != j)
@@ -171,6 +149,12 @@ void BBInit()
 		BishopAttacks[i] = (DiagonalBB[GetDiagonal(i)] | AntiDiagonalBB[GetAntiDiagonal(i)]) ^ SquareBB[i];
 		QueenAttacks[i] = RookAttacks[i] | BishopAttacks[i];
  	}
+
+	const int BSteps[4] = { 7, 9, -7, -9 };
+	const int RSteps[4] = { 8, 1, -8, -1 };
+
+	InitSliderAttacks(BishopTable, BishopAttacksMagic, BSteps);
+	InitSliderAttacks(RookTable, RookAttacksMagic, RSteps);
 }
 
 char PieceToChar(unsigned int piece)
@@ -200,7 +184,7 @@ Pieces Piece(PieceTypes type, Players colour)
 Square GetPosition(File file, Rank rank)
 {
 	assert(file < N_FILES);
-	assert(file < N_RANKS);
+	assert(rank < N_RANKS);
 
 	return static_cast<Square>(rank * 8 + file);
 }
@@ -359,7 +343,7 @@ uint64_t inBetween(unsigned int sq1, unsigned int sq2)
 	line += 2 * (((rank & 7) - 1) >> 58);			/* b1g1 if same rank */
 	line += (((rank - file) & 15) - 1) & b2g7;		/* b2g7 if same diagonal */
 	line += (((rank + file) & 15) - 1) & h1b7;		/* h1b7 if same antidiag */
-	line *= btwn & -btwn;							/* mul acts like shift by smaller square */
+	line = int64_t(uint64_t(line) << (std::min)(sq1, sq2));							
 	return line & btwn;								/* return the bits on that line in-between */
 }
 
@@ -375,3 +359,64 @@ bool mayMove(unsigned int from, unsigned int to, uint64_t pieces)
 {
 	return (inBetweenCache(from, to) & pieces) == 0;
 }
+
+//--------------------------------------------------------------------------
+//Below code adapted with permission from Terje, author of Weiss.
+
+Magic BishopTable[64];
+Magic RookTable[64];
+
+// Helper function that returns a bitboard with the landing square of
+// the step, or an empty bitboard if the step would go outside the board
+uint64_t LandingSquareBB(const int sq, const int step) {
+	const unsigned int to = sq + step;
+	return (uint64_t)(to <= SQ_H8 && std::max(AbsFileDiff(sq, to), AbsRankDiff(sq, to)) <= 2) << (to & SQ_H8);
+}
+
+// Helper function that makes a slider attack bitboard
+uint64_t MakeSliderAttackBB(const int sq, const uint64_t occupied, const int steps[4]) {
+
+	uint64_t attacks = 0;
+
+	for (int dir = 0; dir < 4; ++dir) {
+
+		int s = sq;
+		while (!(occupied & SquareBB[s]) && LandingSquareBB(s, steps[dir]))
+			attacks |= SquareBB[(s += steps[dir])];
+	}
+
+	return attacks;
+}
+
+// Initializes slider attack lookups
+void InitSliderAttacks(Magic m[64], uint64_t *table, const int steps[4]) {
+
+#ifndef USE_PEXT
+	const uint64_t* magics = steps[0] == 8 ? RookMagics : BishopMagics;
+#endif
+
+	for (uint32_t sq = 0; sq < N_SQUARES; ++sq) {
+
+		m[sq].attacks = table;
+
+		// Construct the mask
+		uint64_t edges = ((RankBB[RANK_1] | RankBB[RANK_8]) & ~RankBB[GetRank(sq)])
+			| ((FileBB[FILE_A] | FileBB[FILE_H]) & ~FileBB[GetFile(sq)]);
+
+		m[sq].mask = MakeSliderAttackBB(sq, 0, steps) & ~edges;
+
+#ifndef USE_PEXT
+		m[sq].magic = magics[sq];
+		m[sq].shift = 64 - GetBitCount(m[sq].mask);
+#endif
+
+		uint64_t occupied = 0;
+		do {
+			m[sq].attacks[AttackIndex(sq, occupied, m)] = MakeSliderAttackBB(sq, occupied, steps);
+			occupied = (occupied - m[sq].mask) & m[sq].mask; // Carry rippler
+			table++;
+		} while (occupied);
+	}
+}
+
+//--------------------------------------------------------------------------

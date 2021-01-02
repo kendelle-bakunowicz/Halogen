@@ -57,10 +57,10 @@ bool Move::IsCapture() const
 
 void Move::Print() const
 {
-	unsigned int prev = GetFrom();
-	unsigned int current = GetTo();
+	Square prev = GetFrom();
+	Square current = GetTo();
 
-	std::cout << (char)(prev % 8 + 97) << (prev / 8) + 1 << (char)(current % 8 + 97) << (current / 8) + 1;	//+1 to make it from 1-8 and not 0-7, 97 is ascii for 'a'
+	std::cout << (char)(GetFile(prev) + 'a') << GetRank(prev) + 1 << (char)(GetFile(current) + 'a') << GetRank(current) + 1;	//+1 to make it from 1-8 and not 0-7
 
 	if (IsPromotion())
 	{
@@ -78,6 +78,16 @@ void Move::Print() const
 bool Move::operator==(const Move & rhs) const
 {
 	return (data == rhs.data);
+}
+
+bool Move::operator<(const Move& rhs) const
+{
+	return orderScore < rhs.orderScore;
+}
+
+bool Move::operator>(const Move& rhs) const
+{
+	return orderScore > rhs.orderScore;
 }
 
 bool Move::IsUninitialized() const

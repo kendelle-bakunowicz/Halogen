@@ -1,7 +1,6 @@
 #pragma once
 
-#include "SearchData.h"
-#include "MoveGeneration.h"
+#include "MoveGenerator.h"
 #include "tbprobe.h"
 #include <ctime>
 #include <algorithm>
@@ -24,6 +23,9 @@ extern int Aspiration_window;
 
 extern int Delta_margin;
 
+extern int SNMP_depth;
+extern int SNMP_coeff;
+
 /*----------------*/
 
 struct SearchResult
@@ -39,5 +41,4 @@ private:
 	Move m_move;
 };
 
-void MultithreadedSearch(const Position& position, unsigned int threadCount, const SearchLimits& limits);
-uint64_t BenchSearch(const Position& position, int maxSearchDepth = MAX_DEPTH);
+uint64_t SearchThread(const Position& position, unsigned int threadCount, SearchLimits limits, bool noOutput = false);
